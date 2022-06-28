@@ -10,7 +10,7 @@ use std::{
     },
 };
 
-use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use parking_lot::{Mutex, RwLock};
 
 struct DiskMap {
     num_entries: AtomicUsize,
@@ -73,12 +73,12 @@ impl Entry {
         }
     }
 
-    fn read(&self) -> Result<EntryReader<RwLockReadGuard<EntryInner>>> {
+    fn read(&self) -> Result<impl Read + '_> {
         let m = self.inner.read();
         EntryReader::new(m)
     }
 
-    fn write(&mut self) -> Result<EntryWriter<RwLockWriteGuard<EntryInner>>> {
+    fn write(&mut self) -> Result<impl Write + '_> {
         let m = self.inner.write();
         EntryWriter::new(m, self.quota_in_bytes.clone())
     }
@@ -290,7 +290,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_disk_map() {
+    fn disk_map() {
         let tmp_dir = tempdir::TempDir::new("diskmap").unwrap();
         let dm = DiskMap::new(tmp_dir.path(), 5).unwrap();
         let prev_cnt = std::fs::read_dir(tmp_dir.path()).unwrap().count();
