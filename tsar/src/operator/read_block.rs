@@ -26,7 +26,7 @@ impl<R: std::io::Read> Operator for ReadBlock<'_, R> {
                 v => n += v,
             }
         }
-        buf.drain(n..);
+        buf.truncate(n);
         Ok(n)
     }
 }

@@ -21,7 +21,7 @@ macro_rules! cvt_type {
             $buf[offset..offset + ND].copy_from_slice(&curr.to_le_bytes());
             offset + ND
         });
-        $buf.drain(offset..);
+        $buf.truncate(offset);
     };
 }
 
@@ -58,7 +58,7 @@ macro_rules! cvt_type_blk {
             $buf[offset..offset + ND].copy_from_slice(&curr.to_le_bytes());
             offset + ND
         });
-        $buf.drain(offset..);
+        $buf.truncate(offset);
     };
 }
 

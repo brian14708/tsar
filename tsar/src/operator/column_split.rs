@@ -22,12 +22,8 @@ impl SplitFloat for f32 {
 
     fn to_split_bits(self) -> ([u8; 1], [u8; 3]) {
         let b = self.to_bits();
-        (
-            [((b >> 23) & 0xff) as u8],
-            (((b & 0x80000000) >> 8) | (b & 0x7fffff)).to_le_bytes()[..3]
-                .try_into()
-                .unwrap(),
-        )
+        let tmp = (((b & 0x80000000) >> 8) | (b & 0x7fffff)).to_le_bytes();
+        ([(b >> 23) as u8], [tmp[0], tmp[1], tmp[2]])
     }
 
     fn from_split_bits((e, m): ([u8; 1], [u8; 3])) -> Self {
@@ -42,11 +38,10 @@ impl SplitFloat for f64 {
 
     fn to_split_bits(self) -> ([u8; 2], [u8; 7]) {
         let b = self.to_bits();
+        let tmp = (((b & 0x8000000000000000) >> 11) | (b & 0xfffffffffffff)).to_le_bytes();
         (
             (((b >> 52) & 0x7ff) as u16).to_le_bytes(),
-            (((b & 0x8000000000000000) >> 11) | (b & 0xfffffffffffff)).to_le_bytes()[..7]
-                .try_into()
-                .unwrap(),
+            [tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6]],
         )
     }
 
@@ -63,8 +58,8 @@ impl SplitFloat for half::bf16 {
     fn to_split_bits(self) -> ([u8; 1], [u8; 1]) {
         let b = self.to_bits();
         (
-            [((b >> 7) & 0xff) as u8],
-            [(((b & 0x8000) >> 8) | (b & 0x7f)) as u8],
+            [(b >> 7) as u8],
+            [((b >> 8) as u8 & 0x80) | (b as u8 & 0x7f)],
         )
     }
 
@@ -90,32 +85,14 @@ macro_rules! split_float {
     ($src:ty, $in:expr, $out_0:expr, $out_1:expr) => {{
         const N: usize = std::mem::size_of::<$src>();
         assert_eq!($in.len() % N, 0);
-        let mut buf_0: [u8; 512] = [0; 512];
-        let mut buf_1: [u8; 512] = [0; 512];
-        let mut offset_0 = 0;
-        let mut offset_1 = 0;
-        $in.chunks_exact(N).for_each(|m| {
-            let curr = <$src>::from_le_bytes(m.try_into().unwrap());
-            let result = curr.to_split_bits();
-            if offset_0 + result.0.len() >= buf_0.len() {
-                let l = $out_0.len() + offset_0;
-                $out_0.extend(&buf_0);
-                $out_0.drain(l..);
-                offset_0 = 0;
-            }
-            if offset_1 + result.1.len() >= buf_1.len() {
-                let l = $out_1.len() + offset_1;
-                $out_1.extend(&buf_1);
-                $out_1.drain(l..);
-                offset_1 = 0;
-            }
-            buf_0[offset_0..offset_0 + result.0.len()].copy_from_slice(&result.0);
-            buf_1[offset_1..offset_1 + result.1.len()].copy_from_slice(&result.1);
-            offset_0 += result.0.len();
-            offset_1 += result.1.len();
+        let ret_example: <$src as SplitFloat>::Output = Default::default();
+        $out_0.resize_with($in.len() / N * ret_example.0.len(), Default::default);
+        $out_1.resize_with($in.len() / N * ret_example.1.len(), Default::default);
+        $in.chunks_exact(N).enumerate().for_each(|(idx, m)| {
+            let result = <$src>::from_le_bytes(m.try_into().unwrap()).to_split_bits();
+            $out_0[idx * result.0.len()..(idx + 1) * result.0.len()].copy_from_slice(&result.0);
+            $out_1[idx * result.1.len()..(idx + 1) * result.1.len()].copy_from_slice(&result.1);
         });
-        $out_0.extend(&buf_0[..offset_0]);
-        $out_1.extend(&buf_1[..offset_1]);
     }};
 }
 

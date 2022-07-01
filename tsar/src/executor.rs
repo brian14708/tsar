@@ -55,7 +55,7 @@ where
 
         if self.buf.len() > buf.len() {
             buf.copy_from_slice(&self.buf[..buf.len()]);
-            self.buf.drain(buf.len()..);
+            self.buf.truncate(buf.len());
             Ok(buf.len())
         } else {
             let r = self.buf.len();
