@@ -1,5 +1,3 @@
-use half::bf16;
-
 use crate::executor::{Buffer, Context, Operator};
 
 #[derive(Copy, Clone)]
@@ -22,14 +20,14 @@ impl SplitFloat for f32 {
 
     fn to_split_bits(self) -> ([u8; 1], [u8; 3]) {
         let b = self.to_bits();
-        let tmp = (((b & 0x80000000) >> 8) | (b & 0x7fffff)).to_le_bytes();
+        let tmp = (((b & 0x8000_0000) >> 8) | (b & 0x007f_ffff)).to_le_bytes();
         ([(b >> 23) as u8], [tmp[0], tmp[1], tmp[2]])
     }
 
     fn from_split_bits((e, m): ([u8; 1], [u8; 3])) -> Self {
-        let e = e[0] as u32;
+        let e = u32::from(e[0]);
         let m = u32::from_le_bytes([m[0], m[1], m[2], 0]);
-        f32::from_bits(e << 23 | (m & 0x7fffff) | (m & 0x800000) << 8)
+        Self::from_bits(e << 23 | (m & 0x007f_ffff) | (m & 0x0080_0000) << 8)
     }
 }
 
@@ -38,7 +36,7 @@ impl SplitFloat for f64 {
 
     fn to_split_bits(self) -> ([u8; 2], [u8; 7]) {
         let b = self.to_bits();
-        let tmp = (((b & 0x8000000000000000) >> 11) | (b & 0xfffffffffffff)).to_le_bytes();
+        let tmp = (((b & 0x8000_0000_0000_0000) >> 11) | (b & 0x000f_ffff_ffff_ffff)).to_le_bytes();
         (
             (((b >> 52) & 0x7ff) as u16).to_le_bytes(),
             [tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6]],
@@ -46,9 +44,9 @@ impl SplitFloat for f64 {
     }
 
     fn from_split_bits((e, m): ([u8; 2], [u8; 7])) -> Self {
-        let e = u16::from_le_bytes(e) as u64;
+        let e = u64::from(u16::from_le_bytes(e));
         let m = u64::from_le_bytes([m[0], m[1], m[2], m[3], m[4], m[5], m[6], 0]);
-        f64::from_bits((e << 52) | (m & 0xfffffffffffff) | (m & 0x10000000000000) << 11)
+        Self::from_bits((e << 52) | (m & 0x000f_ffff_ffff_ffff) | (m & 0x0010_0000_0000_0000) << 11)
     }
 }
 
@@ -64,13 +62,13 @@ impl SplitFloat for half::bf16 {
     }
 
     fn from_split_bits((e, m): ([u8; 1], [u8; 1])) -> Self {
-        let m = m[0] as u16;
-        let e = e[0] as u16;
-        bf16::from_bits(e << 7 | (m & 0x7f) | (m & 0x80) << 8)
+        let m = u16::from(m[0]);
+        let e = u16::from(e[0]);
+        Self::from_bits(e << 7 | (m & 0x7f) | (m & 0x80) << 8)
     }
 }
 
-pub(crate) struct ColumnarSplit<'p> {
+pub struct ColumnarSplit<'p> {
     parent: Box<dyn Operator + 'p>,
     mode: ColumnarSplitMode,
 }
@@ -100,9 +98,9 @@ impl Operator for ColumnarSplit<'_> {
     fn num_output_buffers(&self) -> usize {
         self.parent.num_output_buffers()
             * match self.mode {
-                ColumnarSplitMode::Bfloat16 => 2,
-                ColumnarSplitMode::Float32 => 2,
-                ColumnarSplitMode::Float64 => 2,
+                ColumnarSplitMode::Bfloat16
+                | ColumnarSplitMode::Float32
+                | ColumnarSplitMode::Float64 => 2,
             }
     }
 
@@ -155,7 +153,7 @@ mod tests {
     fn split_bf16() {
         for f in test_util::BF16_DATA {
             let o = f.to_split_bits();
-            let b = bf16::from_split_bits(o);
+            let b = half::bf16::from_split_bits(o);
             assert_delta!(f, b);
         }
     }

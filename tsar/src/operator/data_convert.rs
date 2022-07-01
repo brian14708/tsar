@@ -88,7 +88,7 @@ fn encode(mode: DataConvertMode, buf: &mut Vec<u8>) {
     }
 }
 
-pub(crate) struct DataConvert<'p> {
+pub struct DataConvert<'p> {
     parent: Box<dyn Operator + 'p>,
     mode: DataConvertMode,
 }
@@ -121,42 +121,42 @@ mod tests {
     #[test]
     fn f32_to_bf16() {
         let mut wtr = vec![];
-        test_util::F32_DATA.iter().for_each(|&f| {
+        for &f in test_util::F32_DATA.iter() {
             wtr.write_f32::<LittleEndian>(f).unwrap();
-        });
+        }
         encode(DataConvertMode::Float32ToBfloat16, &mut wtr);
         let mut rdr = std::io::Cursor::new(wtr);
-        test_util::F32_DATA.iter().for_each(|&f| {
+        for &f in test_util::F32_DATA.iter() {
             let bf16 = half::bf16::from_bits(rdr.read_u16::<LittleEndian>().unwrap());
             assert_delta!(bf16, half::bf16::from_f32(f), half::bf16::default());
-        });
+        }
     }
 
     #[test]
     fn f64_to_bf16() {
         let mut wtr = vec![];
-        test_util::F64_DATA.iter().for_each(|&f| {
+        for &f in test_util::F64_DATA.iter() {
             wtr.write_f64::<LittleEndian>(f).unwrap();
-        });
+        }
         encode(DataConvertMode::Float64ToBfloat16, &mut wtr);
         let mut rdr = std::io::Cursor::new(wtr);
-        test_util::F64_DATA.iter().for_each(|&f| {
+        for &f in test_util::F64_DATA.iter() {
             let bf16 = half::bf16::from_bits(rdr.read_u16::<LittleEndian>().unwrap());
             assert_delta!(bf16, half::bf16::from_f64(f));
-        });
+        }
     }
 
     #[test]
     fn f64_to_f64() {
         let mut wtr = vec![];
-        test_util::F64_DATA.iter().for_each(|&f| {
+        for &f in test_util::F64_DATA.iter() {
             wtr.write_f64::<LittleEndian>(f).unwrap();
-        });
+        }
         encode(DataConvertMode::Float64ToFloat32, &mut wtr);
         let mut rdr = std::io::Cursor::new(wtr);
-        test_util::F64_DATA.iter().for_each(|&f| {
+        for &f in test_util::F64_DATA.iter() {
             let ff = f32::from_bits(rdr.read_u32::<LittleEndian>().unwrap());
             assert_delta!(ff, (f as f32));
-        });
+        }
     }
 }

@@ -9,7 +9,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let mut rng = rand::thread_rng();
     let mut group = c.benchmark_group("compress");
 
-    for size in [16 * MB].iter() {
+    {
+        let size = &(16 * MB);
         group.throughput(Throughput::Bytes(*size as u64));
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             let mut buf = BytesMut::with_capacity(size);

@@ -1,4 +1,4 @@
-pub(crate) const F32_DATA: [f32; 12] = [
+pub const F32_DATA: [f32; 12] = [
     0.0,
     123.4,
     -123.4,
@@ -13,7 +13,7 @@ pub(crate) const F32_DATA: [f32; 12] = [
     f32::NEG_INFINITY,
 ];
 
-pub(crate) const F64_DATA: [f64; 12] = [
+pub const F64_DATA: [f64; 12] = [
     0.0,
     123.4,
     -123.4,
@@ -28,7 +28,7 @@ pub(crate) const F64_DATA: [f64; 12] = [
     f64::NEG_INFINITY,
 ];
 
-pub(crate) const BF16_DATA: [half::bf16; 12] = [
+pub const BF16_DATA: [half::bf16; 12] = [
     half::bf16::from_f32_const(0.0),
     half::bf16::from_f32_const(123.4),
     half::bf16::from_f32_const(-123.4),

@@ -1,14 +1,14 @@
 use smallvec::SmallVec;
 
-pub(crate) type Buffer<'a> = object_pool::Reusable<'a, Vec<u8>>;
+pub type Buffer<'a> = object_pool::Reusable<'a, Vec<u8>>;
 
-pub(crate) struct Context {
+pub struct Context {
     pool: object_pool::Pool<Vec<u8>>,
 }
 
 impl Context {
     fn new() -> Self {
-        Context {
+        Self {
             pool: object_pool::Pool::new(4, || Vec::with_capacity(4096)),
         }
     }
@@ -24,13 +24,13 @@ impl Context {
     }
 }
 
-pub(crate) trait Operator {
+pub trait Operator {
     fn num_output_buffers(&self) -> usize;
 
     fn next(&mut self, ctx: &Context, out: &mut [Buffer]) -> std::io::Result<usize>;
 }
 
-pub(crate) struct ExecReader<'o, Op>
+pub struct ExecReader<'o, Op>
 where
     Op: Operator + ?Sized,
 {
@@ -66,7 +66,7 @@ where
     }
 }
 
-pub(crate) trait Executable<Op: Operator + ?Sized> {
+pub trait Executable<Op: Operator + ?Sized> {
     fn execute_reader(&mut self) -> ExecReader<Op>;
     fn execute_discard(&mut self) -> std::io::Result<usize>;
 }

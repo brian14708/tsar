@@ -1,6 +1,6 @@
 use crate::executor::{Buffer, Context, Operator};
 
-pub(crate) struct MultiWrite<'p> {
+pub struct MultiWrite<'p> {
     parent: Box<dyn Operator + 'p>,
     write: Vec<&'p mut dyn std::io::Write>,
 }

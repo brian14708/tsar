@@ -1,6 +1,6 @@
 use crate::executor::{Buffer, Context, Operator};
 
-pub(crate) struct ReadBlock<'p, R: std::io::Read> {
+pub struct ReadBlock<'p, R: std::io::Read> {
     block_size: usize,
     reader: &'p mut R,
 }

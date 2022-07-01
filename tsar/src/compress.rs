@@ -30,6 +30,7 @@ pub struct Compressor {
 }
 
 impl Compressor {
+    #[must_use]
     pub fn new(stages: Vec<Stage>, output: CompressionMode) -> Self {
         Self { stages, output }
     }
@@ -42,7 +43,7 @@ impl Compressor {
         let mut out: Vec<Box<dyn std::io::Write>> = vec![];
 
         let mut n: Box<dyn Operator> = ReadBlock::new(reader, 128 * 1024);
-        for s in self.stages.iter() {
+        for s in &self.stages {
             match s {
                 Stage::DeltaEncode(m) => n = DeltaEncode::new(n, *m),
                 Stage::DataConvert(m) => n = DataConvert::new(n, *m),

@@ -22,18 +22,18 @@ struct DiskMap {
 impl DiskMap {
     fn new(path: impl Into<PathBuf>, max_size_in_bytes: usize) -> Result<Self> {
         let path = path.into();
-        if !path.is_dir() {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "DiskMap: path is not a directory",
-            ))
-        } else {
-            Ok(DiskMap {
+        if path.is_dir() {
+            Ok(Self {
                 path,
                 map: Mutex::new(HashMap::new()),
                 quota_in_bytes: Arc::new(AtomicIsize::new(max_size_in_bytes as isize)),
                 num_entries: AtomicUsize::new(0),
             })
+        } else {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "DiskMap: path is not a directory",
+            ))
         }
     }
 
@@ -63,7 +63,7 @@ struct Entry {
 
 impl Entry {
     fn new(path: PathBuf, quota_in_bytes: Arc<AtomicIsize>) -> Self {
-        Entry {
+        Self {
             inner: Arc::new(RwLock::new(EntryInner {
                 path,
                 storage: Storage::Memory(Vec::new()),
@@ -135,7 +135,7 @@ where
             }
             Storage::Disk => Some(File::create(entry.get_path())?),
         };
-        Ok(EntryWriter {
+        Ok(Self {
             entry,
             fd,
             quota_in_bytes,
@@ -220,7 +220,7 @@ where
             Storage::Memory(_) => (None, 0),
             Storage::Disk => (Some(File::open(entry.get_path())?), usize::MAX),
         };
-        Ok(EntryReader { entry, fd, offset })
+        Ok(Self { entry, fd, offset })
     }
 }
 

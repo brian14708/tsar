@@ -98,7 +98,7 @@ fn encode(mode: DeltaEncodeMode, buf: &mut Vec<u8>, curr_vec: &mut [u8; 16]) {
     }
 }
 
-pub(crate) struct DeltaEncode<'p> {
+pub struct DeltaEncode<'p> {
     parent: Box<dyn Operator + 'p>,
     mode: DeltaEncodeMode,
     curr: [u8; 16],
