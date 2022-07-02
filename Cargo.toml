@@ -1,4 +1,5 @@
 [workspace]
 members = [
   "tsar",
+  "tsar-py",
 ]
