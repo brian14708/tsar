@@ -1,15 +1,14 @@
-use std::path::Path;
-
 use crate::{
     executor::Executable,
     executor::Operator,
     operator::{
-        column_split::{ColumnarSplit, ColumnarSplitMode},
-        data_convert::{DataConvert, DataConvertMode},
-        delta_encode::{DeltaEncode, DeltaEncodeMode},
-        multi_write::MultiWrite,
-        read_block::ReadBlock,
+        column_split::ColumnarSplit, data_convert::DataConvert, delta_encode::DeltaEncode,
+        multi_write::MultiWrite, read_block::ReadBlock,
     },
+};
+
+pub use crate::operator::{
+    column_split::ColumnarSplitMode, data_convert::DataConvertMode, delta_encode::DeltaEncodeMode,
 };
 
 #[derive(Copy, Clone)]
@@ -38,9 +37,9 @@ impl Compressor {
     pub fn compress(
         &self,
         reader: &mut impl std::io::Read,
-        p: impl AsRef<Path>,
+        mut fp: impl FnMut() -> std::io::Result<Box<dyn std::io::Write>>,
     ) -> std::io::Result<usize> {
-        let mut out: Vec<Box<dyn std::io::Write>> = vec![];
+        let mut out: Vec<Box<dyn std::io::Write>> = Vec::new();
 
         let mut n: Box<dyn Operator> = ReadBlock::new(reader, 128 * 1024);
         for s in &self.stages {
@@ -51,24 +50,13 @@ impl Compressor {
             };
         }
 
-        let opener = |p: &Path| -> std::io::Result<Box<dyn std::io::Write>> {
-            let f = std::fs::File::create(p)?;
-            Ok(match self.output {
-                CompressionMode::None => Box::new(f),
+        for _ in 0..n.num_output_buffers() {
+            let f = fp()?;
+            out.push(match self.output {
+                CompressionMode::None => f,
                 CompressionMode::Zstd => Box::new(zstd::Encoder::new(f, 9)?.auto_finish()),
-            })
-        };
-
-        if n.num_output_buffers() == 1 {
-            out.push(opener(p.as_ref())?);
-        } else {
-            for i in 0..n.num_output_buffers() {
-                out.push(opener(
-                    p.as_ref().with_extension(format!("{}", i)).as_path(),
-                )?);
-            }
+            });
         }
-
         n = MultiWrite::new(
             n,
             out.iter_mut()

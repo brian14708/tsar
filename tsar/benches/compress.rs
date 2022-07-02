@@ -24,12 +24,18 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     tsar::Stage::DataConvert(tsar::DataConvertMode::Float32ToBfloat16),
                     tsar::Stage::ColumnarSplit(tsar::ColumnarSplitMode::Bfloat16),
                 ],
-                tsar::CompressionMode::None,
+                tsar::CompressionMode::Zstd,
             );
             b.iter(|| {
                 use std::io::Cursor;
                 let mut buff = Cursor::new(&buf);
-                compressor.compress(&mut buff, "/tmp/tsar").unwrap();
+                let mut i = 0;
+                compressor
+                    .compress(&mut buff, || {
+                        i += 1;
+                        Ok(Box::new(std::fs::File::create(format!("/tmp/tsar.{}", i))?))
+                    })
+                    .unwrap();
             });
         });
     }
