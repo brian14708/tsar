@@ -30,8 +30,11 @@ pub struct Compressor {
 
 impl Compressor {
     #[must_use]
-    pub fn new(stages: Vec<Stage>, output: CompressionMode) -> Self {
-        Self { stages, output }
+    pub fn new(stages: impl IntoIterator<Item = Stage>, output: CompressionMode) -> Self {
+        Self {
+            stages: Vec::from_iter(stages),
+            output,
+        }
     }
 
     pub fn compress(

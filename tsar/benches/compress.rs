@@ -19,7 +19,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             }
             let buf: Vec<u8> = buf.freeze().iter().cloned().collect();
             let compressor = tsar::Compressor::new(
-                vec![
+                [
                     tsar::Stage::DeltaEncode(tsar::DeltaEncodeMode::DiffFloat32),
                     tsar::Stage::DataConvert(tsar::DataConvertMode::Float32ToBfloat16),
                     tsar::Stage::ColumnarSplit(tsar::ColumnarSplitMode::Bfloat16),
