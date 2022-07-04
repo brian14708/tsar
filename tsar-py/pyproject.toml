@@ -21,3 +21,15 @@ disable = [
     "missing-function-docstring",
 ]
 extension-pkg-allow-list = ["tsar.tsar"]
+generated-members = ["onnx.*Proto"]
+
+[tool.black]
+target-version = ["py36"]
+
+[tool.mypy]
+
+[[tool.mypy.overrides]]
+module = [
+    "onnx",
+]
+ignore_missing_imports = true

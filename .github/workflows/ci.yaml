@@ -38,8 +38,8 @@ jobs:
           cache-dependency-path: '**/pyproject.toml'
       - run: pip install -e ./tsar-py
       - run: pip install pylint black mypy
-      - run: black --check --target-version py36 tsar-py
-      - run: mypy tsar-py
+      - run: black --check --config ./tsar-py/pyproject.toml tsar-py
+      - run: mypy --config-file ./tsar-py/pyproject.toml tsar-py
       - run: pylint --rcfile tsar-py/pyproject.toml tsar-py
 
   build:
