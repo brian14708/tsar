@@ -1,15 +1,18 @@
+use smallvec::SmallVec;
+
 use crate::executor::{Context, Operator};
 
 pub struct MultiWrite<'p> {
     parent: Box<dyn Operator + 'p>,
-    write: Vec<&'p mut dyn std::io::Write>,
+    write: SmallVec<[&'p mut dyn std::io::Write; 4]>,
 }
 
 impl<'p> MultiWrite<'p> {
     pub fn new(
         parent: Box<dyn Operator + 'p>,
-        write: Vec<&'p mut dyn std::io::Write>,
+        write: impl IntoIterator<Item = &'p mut dyn std::io::Write>,
     ) -> Box<Self> {
+        let write: SmallVec<_> = write.into_iter().collect();
         assert_eq!(parent.num_outputs(), write.len());
         Box::new(Self { parent, write })
     }

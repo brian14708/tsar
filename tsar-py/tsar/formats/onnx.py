@@ -1,11 +1,13 @@
 import pathlib
-import tempfile
-import os
+import sys
 import itertools
-from typing import Callable, Dict, Iterable, List, Tuple
+import array
+import re
+import json
+from typing import Callable, Iterable
 import onnx
 
-from tsar.tsar import compress_f32
+import tsar.tsar as _tsar
 
 
 def _get_all_tensors(onnx_model_proto: onnx.ModelProto) -> Iterable[onnx.TensorProto]:
@@ -54,53 +56,60 @@ def _get_attribute_tensors_from_graph(
             )
 
 
-def save(name: str, src: pathlib.Path, dst: pathlib.Path, level: int, error: float):
-    # pylint: disable=invalid-name,too-many-locals,bare-except
-    model = onnx.load(src)
-    with tempfile.TemporaryDirectory() as tmp:
-        onnx.save(
-            model,
-            os.path.join(tmp, name),
-            location="_" + name + ".data",
-            save_as_external_data=True,
-        )
-        blks: Dict[str, List[Tuple[int, int, onnx.TensorProto]]] = {}
-        for i in _get_all_tensors(model):
-            if len(i.external_data) > 0:
-                external_data = {e.key: e.value for e in i.external_data}
-                blks.setdefault(external_data["location"], [])
-                blks[external_data["location"]].append(
-                    (int(external_data["offset"]), int(external_data["length"]), i)
+# pylint: disable=too-many-arguments,too-many-locals
+def save(
+    name: str,
+    src: pathlib.Path,
+    dst: _tsar.Writer,
+    level: int,
+    error: float,
+    size_limit: int = 16 * 1024,
+):
+    model = onnx.load(str(src))
+    tensors = _get_all_tensors(model)
+    blob_list = []
+    for idx, tensor in enumerate(tensors):
+        tensor_location = tensor.name
+        if not re.match('^[^<>:;,?"*|/]+$', tensor_location):
+            tensor_location = f"__tensor_{idx}"
+        tensor_location = str(pathlib.Path("data") / name / tensor_location)
+        save_external = False
+
+        if tensor.data_type == onnx.TensorProto.FLOAT:
+            if (
+                tensor.HasField("raw_data")
+                and sys.getsizeof(tensor.raw_data) >= size_limit
+            ):
+                dst.write_blob_f32(
+                    tensor_location, tensor.raw_data, list(tensor.dims), level, error
                 )
-        for k, v in blks.items():
-            v = sorted(v, key=lambda x: x[0])
-            for i in range(1, len(v)):
-                assert v[i][0] == v[i - 1][0] + v[i - 1][1]
-            assert os.path.getsize(os.path.join(tmp, k)) == v[-1][0] + v[-1][1]
-            with open(os.path.join(tmp, k), "rb") as f:
-                ctot = 0
-                tot = 0
-                for offset, length, t in v:
-                    f.seek(offset)
-                    data = f.read(length)
-                    if t.data_type == onnx.TensorProto.FLOAT:
-                        compress_f32(
-                            data, os.path.join(tmp, k + "." + str(offset)), level, error
-                        )
-                        x = os.path.getsize(
-                            os.path.join(tmp, k + "." + str(offset) + ".1")
-                        )
-                        try:
-                            y = os.path.getsize(
-                                os.path.join(tmp, k + "." + str(offset) + ".2")
-                            )
-                        except:
-                            y = 0
-                        ctot += x + y
-                        tot += len(data)
-                        print(1.0 * (x + y) / len(data))
-                print("")
-                print(ctot / 1024.0 / 1024)
-                print(tot / 1024.0 / 1024)
-                print(1.0 * ctot / tot)
-    print(src, dst)
+                tensor.ClearField("raw_data")
+                save_external = True
+            elif len(tensor.float_data) * 4 >= size_limit:
+                data = array.array("f")
+                for val in tensor.float_data:
+                    data.append(val)
+                dst.write_blob_f32(
+                    tensor_location, data.tobytes(), list(tensor.dims), level, error
+                )
+                tensor.ClearField("float_data")
+                save_external = True
+
+        if save_external:
+            blob_list.append(tensor_location)
+            tensor.name = tensor_location
+            tensor.data_location = onnx.TensorProto.EXTERNAL
+            tensor.ClearField("external_data")
+            entry = tensor.external_data.add()
+            entry.key = "location"
+            entry.value = tensor_location
+
+    dst.write_file(
+        f".{name}.json",
+        json.dumps(
+            {
+                "blobs": blob_list,
+            }
+        ).encode(),
+    )
+    dst.write_file(name, model.SerializeToString())

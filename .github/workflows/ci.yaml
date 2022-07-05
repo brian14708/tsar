@@ -73,5 +73,3 @@ jobs:
           cache: 'pip'
           cache-dependency-path: '**/pyproject.toml'
       - run: pip install -e ./tsar-py
-      - run: pip install pytest
-      - run: pytest

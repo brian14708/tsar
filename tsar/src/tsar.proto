@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package tsar;
+
+enum CompressionStage {
+  INVALID_STAGE = 0;
+
+  // compression
+  ZSTD = 1;
+
+  // delta encoding
+  DIFF_BFLOAT16 = 10;
+  DIFF_FLOAT32 = 11;
+  DIFF_FLOAT64 = 12;
+  XOR_UINT64 = 13;
+  XOR_UINT32 = 14;
+  XOR_UINT16 = 15;
+  XOR_UINT8 = 16;
+
+  // data convert
+  CONVERT_FLOAT32_TO_BFLOAT16 = 20;
+  CONVERT_FLOAT64_TO_BFLOAT16 = 21;
+  CONVERT_FLOAT64_TO_FLOAT32 = 22;
+
+  // columnar split
+  SPLIT_MANTISSA_BFLOAT16 = 30;
+  SPLIT_MANTISSA_FLOAT32 = 31;
+  SPLIT_MANTISSA_FLOAT64 = 32;
+}
+
+message Blob {
+  int64 uncompressed_size_in_bytes = 1;
+  int64 file_offset_in_bytes = 2;
+  repeated string chunk_ids = 3;
+  repeated CompressionStage compression_stages = 4;
+  repeated int64 dims = 5;
+}
+
+message BlobFile {
+  string name = 1;
+  repeated Blob blobs = 2;
+}
+
+message RawFile { string name = 1; }
+
+message Bundle {
+  repeated RawFile raw_files = 1;
+  repeated BlobFile blob_files = 2;
+}

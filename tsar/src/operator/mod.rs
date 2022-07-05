@@ -1,3 +1,5 @@
+pub mod block_align;
+pub mod byte_count;
 pub mod column_split;
 pub mod compress;
 pub mod data_convert;

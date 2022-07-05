@@ -2,6 +2,7 @@ use crate::{
     executor::Executable,
     executor::Operator,
     operator::{
+        byte_count::ByteCount,
         column_split::ColumnarSplit,
         compress::{new_compress, new_decompress},
         data_convert::DataConvert,
@@ -16,6 +17,7 @@ pub use crate::operator::{
     delta_encode::DeltaEncodeMode,
 };
 
+#[derive(Clone)]
 pub enum Stage {
     DeltaEncode(DeltaEncodeMode),
     DataConvert(DataConvertMode),
@@ -23,6 +25,7 @@ pub enum Stage {
     Compress(CompressMode),
     Decompress(CompressMode),
 }
+
 pub struct Compressor {
     stages: Vec<Stage>,
 }
@@ -33,7 +36,7 @@ impl Compressor {
     #[must_use]
     pub fn new(stages: impl IntoIterator<Item = Stage>) -> Self {
         Self {
-            stages: Vec::from_iter(stages),
+            stages: Vec::from_iter(stages.into_iter()),
         }
     }
 
@@ -57,8 +60,21 @@ impl Compressor {
         &self,
         reader: &mut (impl std::io::Read + Clone),
     ) -> std::io::Result<(usize, f64)> {
-        _ = Self::build_graph(&self.stages, ReadBlock::new(reader, Self::BLK_SIZE));
-        Ok((0, 0.0))
+        let mut compressed_size = 0;
+        {
+            let mut n: Box<dyn Operator> = ReadBlock::new(reader, Self::BLK_SIZE);
+            n = Self::build_graph(&self.stages, n);
+            n = ByteCount::new(n, &mut compressed_size);
+            n.execute_discard()?;
+        }
+        Ok((compressed_size, 0.0))
+    }
+
+    pub fn build_cgraph<'a>(&self, reader: &'a mut impl std::io::Read) -> Box<dyn Operator + 'a> {
+        let _out: Vec<Box<dyn std::io::Write>> = Vec::new();
+
+        let n: Box<dyn Operator> = ReadBlock::new(reader, Self::BLK_SIZE);
+        Self::build_graph(&self.stages, n)
     }
 
     pub fn compress(
@@ -74,12 +90,7 @@ impl Compressor {
         for _ in 0..n.num_outputs() {
             out.push(fp()?);
         }
-        n = MultiWrite::new(
-            n,
-            out.iter_mut()
-                .map(|o| o as &mut dyn std::io::Write)
-                .collect(),
-        );
+        n = MultiWrite::new(n, out.iter_mut().map(|o| o as &mut dyn std::io::Write));
         n.execute_discard()
     }
 }

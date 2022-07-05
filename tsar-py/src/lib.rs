@@ -1,49 +1,56 @@
 use pyo3::prelude::*;
 
-/// Formats the sum of two numbers as string.
-#[pyfunction]
-fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
-    Ok((a + b).to_string())
+#[pyclass(module = "tsar.tsar")]
+struct Writer {
+    w: tsar::writer::Writer<std::fs::File>,
 }
 
-#[pyfunction]
-fn compress_f32(buf: &[u8], dst: String, level: i32, _error: f64) -> PyResult<()> {
-    let compressor = tsar::Compressor::new(if level <= 0 {
-        vec![
-            tsar::Stage::ColumnarSplit(tsar::ColumnarSplitMode::Float32),
-            tsar::Stage::Compress(tsar::CompressMode::Zstd(0)),
-        ]
-    } else if level == 1 {
-        vec![
-            tsar::Stage::DataConvert(tsar::DataConvertMode::Float32ToBfloat16),
-            tsar::Stage::ColumnarSplit(tsar::ColumnarSplitMode::Bfloat16),
-            tsar::Stage::Compress(tsar::CompressMode::Zstd(0)),
-        ]
-    } else {
-        vec![
-            tsar::Stage::DeltaEncode(tsar::DeltaEncodeMode::DiffDiffFloat32),
-            tsar::Stage::DataConvert(tsar::DataConvertMode::Float32ToBfloat16),
-            tsar::Stage::ColumnarSplit(tsar::ColumnarSplitMode::Bfloat16),
-            tsar::Stage::Compress(tsar::CompressMode::Zstd(0)),
-        ]
-    });
-
-    use std::io::Cursor;
-    let mut cur = Cursor::new(buf);
-    let mut i = 0;
-    compressor
-        .compress(&mut cur, || {
-            i += 1;
-            Ok(Box::new(std::fs::File::create(format!("{}.{}", dst, i))?))
+#[pymethods]
+impl Writer {
+    #[new]
+    fn new(dst: &str) -> PyResult<Self> {
+        Ok(Self {
+            w: tsar::writer::Writer::new(std::fs::File::create(dst)?),
         })
-        .unwrap();
-    Ok(())
+    }
+
+    pub fn write_file(&mut self, name: String, d: &[u8]) -> PyResult<()> {
+        self.w.write_file(name, std::io::Cursor::new(d)).unwrap();
+        Ok(())
+    }
+
+    pub fn write_blob_f32(
+        &mut self,
+        name: &str,
+        data: &[u8],
+        dims: Vec<usize>,
+        level: i32,
+        relative_error: f64,
+    ) -> PyResult<()> {
+        self.w
+            .write_blob_tensor_f32(
+                name,
+                0,
+                std::io::Cursor::new(data),
+                &dims,
+                tsar::writer::WriteOption {
+                    level,
+                    relative_error,
+                },
+            )
+            .unwrap();
+        Ok(())
+    }
+
+    pub fn close(&mut self) -> PyResult<()> {
+        self.w.finish().unwrap();
+        Ok(())
+    }
 }
 
 /// A Python module implemented in Rust.
 #[pymodule]
 fn tsar(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
-    m.add_function(wrap_pyfunction!(compress_f32, m)?)?;
+    m.add_class::<Writer>()?;
     Ok(())
 }
