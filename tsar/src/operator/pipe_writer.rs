@@ -2,7 +2,7 @@ use std::{cell::RefCell, io::Write, ops::DerefMut, rc::Rc};
 
 use crate::executor::{Context, Operator};
 
-pub struct Pipe<'p> {
+pub struct PipeWriter<'p> {
     parent: Box<dyn Operator + 'p>,
     buf: Vec<Adapter>,
     writers: Vec<Box<dyn std::io::Write + 'p>>,
@@ -44,7 +44,7 @@ impl Write for Adapter {
     }
 }
 
-impl<'p> Pipe<'p> {
+impl<'p> PipeWriter<'p> {
     pub fn new(
         parent: Box<dyn Operator + 'p>,
         mut w: impl FnMut(Adapter) -> Box<dyn std::io::Write + 'p>,
@@ -63,7 +63,7 @@ impl<'p> Pipe<'p> {
     }
 }
 
-impl Operator for Pipe<'_> {
+impl Operator for PipeWriter<'_> {
     fn num_outputs(&self) -> usize {
         self.parent.num_outputs()
     }

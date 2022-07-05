@@ -2,8 +2,12 @@ use crate::{
     executor::Executable,
     executor::Operator,
     operator::{
-        column_split::ColumnarSplit, compress::Compress, data_convert::DataConvert,
-        delta_encode::DeltaEncode, multi_write::MultiWrite, pipe::Pipe, read_block::ReadBlock,
+        column_split::ColumnarSplit,
+        compress::{new_compress, new_decompress},
+        data_convert::DataConvert,
+        delta_encode::DeltaEncode,
+        multi_write::MultiWrite,
+        read_block::ReadBlock,
     },
 };
 
@@ -17,12 +21,15 @@ pub enum Stage {
     DataConvert(DataConvertMode),
     ColumnarSplit(ColumnarSplitMode),
     Compress(CompressMode),
+    Decompress(CompressMode),
 }
 pub struct Compressor {
     stages: Vec<Stage>,
 }
 
 impl Compressor {
+    const BLK_SIZE: usize = 128 * 1024;
+
     #[must_use]
     pub fn new(stages: impl IntoIterator<Item = Stage>) -> Self {
         Self {
@@ -30,20 +37,27 @@ impl Compressor {
         }
     }
 
-    pub fn compress_dryrun(
-        &self,
-        reader: &mut (impl std::io::Read + Clone),
-    ) -> std::io::Result<(usize, f64)> {
-        let mut n: Box<dyn Operator> = ReadBlock::new(reader, 128 * 1024);
-        for s in &self.stages {
+    fn build_graph<'p>(
+        stages: &Vec<Stage>,
+        mut n: Box<dyn Operator + 'p>,
+    ) -> Box<dyn Operator + 'p> {
+        for s in stages {
             match s {
                 Stage::DeltaEncode(m) => n = DeltaEncode::new(n, *m),
                 Stage::DataConvert(m) => n = DataConvert::new(n, *m),
                 Stage::ColumnarSplit(m) => n = ColumnarSplit::new(n, *m),
-                Stage::Compress(m) => n = Compress::new(n, *m),
+                Stage::Compress(m) => n = new_compress(n, *m),
+                Stage::Decompress(m) => n = new_decompress(n, *m),
             };
         }
+        n
+    }
 
+    pub fn compress_dryrun(
+        &self,
+        reader: &mut (impl std::io::Read + Clone),
+    ) -> std::io::Result<(usize, f64)> {
+        _ = Self::build_graph(&self.stages, ReadBlock::new(reader, Self::BLK_SIZE));
         Ok((0, 0.0))
     }
 
@@ -54,21 +68,8 @@ impl Compressor {
     ) -> std::io::Result<usize> {
         let mut out: Vec<Box<dyn std::io::Write>> = Vec::new();
 
-        let mut n: Box<dyn Operator> = ReadBlock::new(reader, 128 * 1024);
-        for s in &self.stages {
-            match s {
-                Stage::DeltaEncode(m) => n = DeltaEncode::new(n, *m),
-                Stage::DataConvert(m) => n = DataConvert::new(n, *m),
-                Stage::ColumnarSplit(m) => n = ColumnarSplit::new(n, *m),
-                Stage::Compress(m) => match m {
-                    CompressMode::Zstd(level) => {
-                        n = Pipe::new(n, |f| {
-                            Box::new(zstd::Encoder::new(f, *level).unwrap().auto_finish())
-                        })
-                    }
-                },
-            };
-        }
+        let mut n: Box<dyn Operator> = ReadBlock::new(reader, Self::BLK_SIZE);
+        n = Self::build_graph(&self.stages, n);
 
         for _ in 0..n.num_outputs() {
             out.push(fp()?);
