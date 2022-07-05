@@ -70,7 +70,7 @@ impl Compressor {
             };
         }
 
-        for _ in 0..n.num_output_buffers() {
+        for _ in 0..n.num_outputs() {
             out.push(fp()?);
         }
         n = MultiWrite::new(

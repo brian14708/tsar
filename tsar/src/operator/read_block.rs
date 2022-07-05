@@ -1,4 +1,4 @@
-use crate::executor::{Buffer, Context, Operator};
+use crate::executor::{Context, Operator};
 
 pub struct ReadBlock<'p, R: std::io::Read> {
     block_size: usize,
@@ -12,11 +12,11 @@ impl<'p, R: std::io::Read> ReadBlock<'p, R> {
 }
 
 impl<R: std::io::Read> Operator for ReadBlock<'_, R> {
-    fn num_output_buffers(&self) -> usize {
+    fn num_outputs(&self) -> usize {
         1
     }
 
-    fn next(&mut self, _ctx: &Context, out: &mut [Buffer]) -> std::io::Result<usize> {
+    fn next(&mut self, _ctx: &Context, out: &mut [Vec<u8>]) -> std::io::Result<usize> {
         let buf = &mut out[0];
         buf.resize_with(self.block_size, Default::default);
         let mut n = 0;

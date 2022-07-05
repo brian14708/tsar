@@ -1,4 +1,4 @@
-use crate::executor::{Buffer, Context, Operator};
+use crate::executor::{Context, Operator};
 
 #[derive(Copy, Clone)]
 pub enum ColumnarSplitMode {
@@ -95,8 +95,8 @@ macro_rules! split_float {
 }
 
 impl Operator for ColumnarSplit<'_> {
-    fn num_output_buffers(&self) -> usize {
-        self.parent.num_output_buffers()
+    fn num_outputs(&self) -> usize {
+        self.parent.num_outputs()
             * match self.mode {
                 ColumnarSplitMode::Bfloat16
                 | ColumnarSplitMode::Float32
@@ -104,8 +104,8 @@ impl Operator for ColumnarSplit<'_> {
             }
     }
 
-    fn next(&mut self, ctx: &Context, out: &mut [Buffer]) -> std::io::Result<usize> {
-        let nb = self.parent.num_output_buffers();
+    fn next(&mut self, ctx: &Context, out: &mut [Vec<u8>]) -> std::io::Result<usize> {
+        let nb = self.parent.num_outputs();
         let mut tmp = ctx.allocate(nb);
         let n = self.parent.next(ctx, &mut tmp)?;
         for (i, buf) in tmp.iter().enumerate() {

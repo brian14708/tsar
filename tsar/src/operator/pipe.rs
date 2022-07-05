@@ -1,6 +1,6 @@
 use std::{cell::RefCell, io::Write, ops::DerefMut, rc::Rc};
 
-use crate::executor::{Buffer, Context, Operator};
+use crate::executor::{Context, Operator};
 
 pub struct Pipe<'p> {
     parent: Box<dyn Operator + 'p>,
@@ -49,7 +49,7 @@ impl<'p> Pipe<'p> {
         parent: Box<dyn Operator + 'p>,
         mut w: impl FnMut(Adapter) -> Box<dyn std::io::Write + 'p>,
     ) -> Box<Self> {
-        let buf = (0..parent.num_output_buffers())
+        let buf = (0..parent.num_outputs())
             .map(|_| Adapter::new())
             .collect::<Vec<_>>();
         let writers = buf.iter().map(|f| w(f.clone())).collect();
@@ -64,11 +64,11 @@ impl<'p> Pipe<'p> {
 }
 
 impl Operator for Pipe<'_> {
-    fn num_output_buffers(&self) -> usize {
-        self.parent.num_output_buffers()
+    fn num_outputs(&self) -> usize {
+        self.parent.num_outputs()
     }
 
-    fn next(&mut self, ctx: &Context, out: &mut [Buffer]) -> std::io::Result<usize> {
+    fn next(&mut self, ctx: &Context, out: &mut [Vec<u8>]) -> std::io::Result<usize> {
         while !self.eof && self.buf.iter().all(|v| v.len() == 0) {
             if self.parent.next(ctx, out)? == 0 {
                 self.eof = true;
@@ -94,7 +94,7 @@ impl Operator for Pipe<'_> {
             .map(|(i, s)| match s.len() {
                 0 => 0,
                 l => {
-                    std::mem::swap(out[i].deref_mut(), s.buf.borrow_mut().deref_mut());
+                    std::mem::swap(&mut out[i], s.buf.borrow_mut().deref_mut());
                     assert!(s.len() == 0);
                     l
                 }

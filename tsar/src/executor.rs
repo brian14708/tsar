@@ -1,6 +1,6 @@
-use smallvec::SmallVec;
+use std::ops::{Deref, DerefMut};
 
-pub type Buffer<'a> = object_pool::Reusable<'a, Vec<u8>>;
+use smallvec::SmallVec;
 
 pub struct Context {
     pool: object_pool::Pool<Vec<u8>>,
@@ -13,21 +13,56 @@ impl Context {
         }
     }
 
-    pub fn allocate(&self, cnt: usize) -> SmallVec<[Buffer; 4]> {
-        (0..cnt)
-            .map(|_| self.pool.pull(|| Vec::with_capacity(4096)))
-            .map(|mut v| {
-                v.clear();
-                v
-            })
-            .collect()
+    pub fn allocate(&self, cnt: usize) -> BufferList {
+        BufferList::new(&self.pool, cnt, 4096)
+    }
+}
+
+pub struct BufferList<'a> {
+    pool: &'a object_pool::Pool<Vec<u8>>,
+    inner: SmallVec<[Vec<u8>; 4]>,
+}
+
+impl<'a> BufferList<'a> {
+    fn new(pool: &'a object_pool::Pool<Vec<u8>>, cnt: usize, cap: usize) -> Self {
+        Self {
+            pool,
+            inner: (0..cnt)
+                .map(|_| pool.pull(|| Vec::with_capacity(cap)))
+                .map(|mut v| {
+                    v.clear();
+                    v.detach().1
+                })
+                .collect(),
+        }
+    }
+}
+
+impl Deref for BufferList<'_> {
+    type Target = [Vec<u8>];
+    fn deref(&self) -> &Self::Target {
+        self.inner.deref()
+    }
+}
+
+impl DerefMut for BufferList<'_> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.inner.deref_mut()
+    }
+}
+
+impl Drop for BufferList<'_> {
+    fn drop(&mut self) {
+        std::mem::take(&mut self.inner)
+            .into_iter()
+            .for_each(|t| self.pool.attach(t))
     }
 }
 
 pub trait Operator {
-    fn num_output_buffers(&self) -> usize;
+    fn num_outputs(&self) -> usize;
 
-    fn next(&mut self, ctx: &Context, out: &mut [Buffer]) -> std::io::Result<usize>;
+    fn next(&mut self, ctx: &Context, out: &mut [Vec<u8>]) -> std::io::Result<usize>;
 }
 
 pub struct ExecReader<'o, Op>
@@ -45,12 +80,11 @@ where
 {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         while self.buf.is_empty() {
-            self.ctx.pool.attach(std::mem::take(&mut self.buf));
             let mut m = self.ctx.allocate(1);
             if self.op.next(&self.ctx, &mut m)? == 0 {
                 return Ok(0);
             }
-            self.buf = m.pop().unwrap().detach().1;
+            std::mem::swap(&mut self.buf, &mut m[0]);
         }
 
         if self.buf.len() > buf.len() {
@@ -82,7 +116,7 @@ impl<Op: Operator + ?Sized> Executable<Op> for dyn AsMut<Op> {
 
 impl<Op: Operator + ?Sized> Executable<Op> for Op {
     fn execute_reader(&mut self) -> ExecReader<Op> {
-        assert!(self.num_output_buffers() == 1);
+        assert!(self.num_outputs() == 1);
         ExecReader {
             op: self,
             ctx: Context::new(),
@@ -93,7 +127,7 @@ impl<Op: Operator + ?Sized> Executable<Op> for Op {
     fn execute_discard(&mut self) -> std::io::Result<usize> {
         let ctx = Context::new();
         let mut total = 0;
-        let mut out_buffer = ctx.allocate(self.num_output_buffers());
+        let mut out_buffer = ctx.allocate(self.num_outputs());
         loop {
             match self.next(&ctx, &mut out_buffer)? {
                 0 => break,
@@ -116,11 +150,11 @@ mod tests {
     }
 
     impl Operator for Generator {
-        fn num_output_buffers(&self) -> usize {
+        fn num_outputs(&self) -> usize {
             1
         }
 
-        fn next(&mut self, _ctx: &Context, out: &mut [Buffer]) -> std::io::Result<usize> {
+        fn next(&mut self, _ctx: &Context, out: &mut [Vec<u8>]) -> std::io::Result<usize> {
             out[0].push(self.cnt);
             self.cnt -= 1;
             if self.cnt == 0 {

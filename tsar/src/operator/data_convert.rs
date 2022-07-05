@@ -1,7 +1,7 @@
 use half::prelude::HalfFloatSliceExt;
 use num_traits::AsPrimitive;
 
-use crate::executor::{Buffer, Context, Operator};
+use crate::executor::{Context, Operator};
 
 #[derive(Copy, Clone)]
 pub enum DataConvertMode {
@@ -100,13 +100,13 @@ impl<'p> DataConvert<'p> {
 }
 
 impl Operator for DataConvert<'_> {
-    fn num_output_buffers(&self) -> usize {
-        self.parent.num_output_buffers()
+    fn num_outputs(&self) -> usize {
+        self.parent.num_outputs()
     }
 
-    fn next(&mut self, ctx: &Context, out: &mut [Buffer]) -> std::io::Result<usize> {
+    fn next(&mut self, ctx: &Context, out: &mut [Vec<u8>]) -> std::io::Result<usize> {
         let n = self.parent.next(ctx, out)?;
-        out.iter_mut().for_each(|o| encode(self.mode, o.as_mut()));
+        out.iter_mut().for_each(|o| encode(self.mode, o));
         Ok(n)
     }
 }
