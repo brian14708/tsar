@@ -13,7 +13,7 @@ impl Context {
         }
     }
 
-    pub(crate) fn allocate(&self, cnt: usize) -> SmallVec<[Buffer; 4]> {
+    pub fn allocate(&self, cnt: usize) -> SmallVec<[Buffer; 4]> {
         (0..cnt)
             .map(|_| self.pool.pull(|| Vec::with_capacity(4096)))
             .map(|mut v| {

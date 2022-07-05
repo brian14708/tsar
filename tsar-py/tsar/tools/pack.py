@@ -11,6 +11,8 @@ def main() -> None:
     parser.add_argument(
         "--format", default="autodetect", type=str, choices=["autodetect", "onnx"]
     )
+    parser.add_argument("-l", "--level", default=1, type=int, choices=[0, 1, 2, 3])
+    parser.add_argument("-e", "--error", default=1e-3, type=float)
     parser.add_argument("src", metavar="INPUT", type=pathlib.Path)
     parser.add_argument("dst", metavar="OUTPUT", type=pathlib.Path)
     args = parser.parse_args()
@@ -23,4 +25,6 @@ def main() -> None:
             sys.exit(1)
 
     if args.format == "onnx":
-        tsar.formats.onnx.save(args.src.name, args.src, args.dst)
+        tsar.formats.onnx.save(
+            args.src.name, args.src, args.dst, args.level, args.error
+        )

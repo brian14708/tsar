@@ -74,7 +74,7 @@ pub struct ColumnarSplit<'p> {
 }
 
 impl<'p> ColumnarSplit<'p> {
-    pub(crate) fn new(parent: Box<dyn Operator + 'p>, mode: ColumnarSplitMode) -> Box<Self> {
+    pub fn new(parent: Box<dyn Operator + 'p>, mode: ColumnarSplitMode) -> Box<Self> {
         Box::new(Self { parent, mode })
     }
 }

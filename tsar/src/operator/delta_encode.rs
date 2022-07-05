@@ -105,7 +105,7 @@ pub struct DeltaEncode<'p> {
 }
 
 impl<'p> DeltaEncode<'p> {
-    pub(crate) fn new(parent: Box<dyn Operator + 'p>, mode: DeltaEncodeMode) -> Box<Self> {
+    pub fn new(parent: Box<dyn Operator + 'p>, mode: DeltaEncodeMode) -> Box<Self> {
         Box::new(Self {
             parent,
             mode,

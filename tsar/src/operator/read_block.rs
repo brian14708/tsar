@@ -6,7 +6,7 @@ pub struct ReadBlock<'p, R: std::io::Read> {
 }
 
 impl<'p, R: std::io::Read> ReadBlock<'p, R> {
-    pub(crate) fn new(reader: &'p mut R, block_size: usize) -> Box<Self> {
+    pub fn new(reader: &'p mut R, block_size: usize) -> Box<Self> {
         Box::new(Self { block_size, reader })
     }
 }

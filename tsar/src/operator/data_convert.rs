@@ -94,7 +94,7 @@ pub struct DataConvert<'p> {
 }
 
 impl<'p> DataConvert<'p> {
-    pub(crate) fn new(parent: Box<dyn Operator + 'p>, mode: DataConvertMode) -> Box<Self> {
+    pub fn new(parent: Box<dyn Operator + 'p>, mode: DataConvertMode) -> Box<Self> {
         Box::new(Self { parent, mode })
     }
 }

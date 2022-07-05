@@ -6,7 +6,7 @@ pub struct MultiWrite<'p> {
 }
 
 impl<'p> MultiWrite<'p> {
-    pub(crate) fn new(
+    pub fn new(
         parent: Box<dyn Operator + 'p>,
         write: Vec<&'p mut dyn std::io::Write>,
     ) -> Box<Self> {
@@ -22,10 +22,12 @@ impl Operator for MultiWrite<'_> {
 
     fn next(&mut self, ctx: &Context, _out: &mut [Buffer]) -> std::io::Result<usize> {
         let mut out = ctx.allocate(self.parent.num_output_buffers());
-        let n = self.parent.next(ctx, &mut out)?;
+        let _ = self.parent.next(ctx, &mut out)?;
+        let mut sz = 0;
         for i in 0..self.write.len() {
-            _ = self.write[i].write(&out[i])?;
+            sz += out[i].len();
+            self.write[i].write_all(&out[i])?;
         }
-        Ok(n)
+        Ok(sz)
     }
 }

@@ -2,39 +2,49 @@ use crate::{
     executor::Executable,
     executor::Operator,
     operator::{
-        column_split::ColumnarSplit, data_convert::DataConvert, delta_encode::DeltaEncode,
-        multi_write::MultiWrite, read_block::ReadBlock,
+        column_split::ColumnarSplit, compress::Compress, data_convert::DataConvert,
+        delta_encode::DeltaEncode, multi_write::MultiWrite, pipe::Pipe, read_block::ReadBlock,
     },
 };
 
 pub use crate::operator::{
-    column_split::ColumnarSplitMode, data_convert::DataConvertMode, delta_encode::DeltaEncodeMode,
+    column_split::ColumnarSplitMode, compress::CompressMode, data_convert::DataConvertMode,
+    delta_encode::DeltaEncodeMode,
 };
-
-#[derive(Copy, Clone)]
-pub enum CompressionMode {
-    None,
-    Zstd,
-}
 
 pub enum Stage {
     DeltaEncode(DeltaEncodeMode),
     DataConvert(DataConvertMode),
     ColumnarSplit(ColumnarSplitMode),
+    Compress(CompressMode),
 }
-
 pub struct Compressor {
     stages: Vec<Stage>,
-    output: CompressionMode,
 }
 
 impl Compressor {
     #[must_use]
-    pub fn new(stages: impl IntoIterator<Item = Stage>, output: CompressionMode) -> Self {
+    pub fn new(stages: impl IntoIterator<Item = Stage>) -> Self {
         Self {
             stages: Vec::from_iter(stages),
-            output,
         }
+    }
+
+    pub fn compress_dryrun(
+        &self,
+        reader: &mut (impl std::io::Read + Clone),
+    ) -> std::io::Result<(usize, f64)> {
+        let mut n: Box<dyn Operator> = ReadBlock::new(reader, 128 * 1024);
+        for s in &self.stages {
+            match s {
+                Stage::DeltaEncode(m) => n = DeltaEncode::new(n, *m),
+                Stage::DataConvert(m) => n = DataConvert::new(n, *m),
+                Stage::ColumnarSplit(m) => n = ColumnarSplit::new(n, *m),
+                Stage::Compress(m) => n = Compress::new(n, *m),
+            };
+        }
+
+        Ok((0, 0.0))
     }
 
     pub fn compress(
@@ -50,15 +60,18 @@ impl Compressor {
                 Stage::DeltaEncode(m) => n = DeltaEncode::new(n, *m),
                 Stage::DataConvert(m) => n = DataConvert::new(n, *m),
                 Stage::ColumnarSplit(m) => n = ColumnarSplit::new(n, *m),
+                Stage::Compress(m) => match m {
+                    CompressMode::Zstd(level) => {
+                        n = Pipe::new(n, |f| {
+                            Box::new(zstd::Encoder::new(f, *level).unwrap().auto_finish())
+                        })
+                    }
+                },
             };
         }
 
         for _ in 0..n.num_output_buffers() {
-            let f = fp()?;
-            out.push(match self.output {
-                CompressionMode::None => f,
-                CompressionMode::Zstd => Box::new(zstd::Encoder::new(f, 9)?.auto_finish()),
-            });
+            out.push(fp()?);
         }
         n = MultiWrite::new(
             n,

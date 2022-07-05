@@ -18,14 +18,12 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 buf.put_f32_le(rng.gen());
             }
             let buf: Vec<u8> = buf.freeze().iter().cloned().collect();
-            let compressor = tsar::Compressor::new(
-                [
-                    tsar::Stage::DeltaEncode(tsar::DeltaEncodeMode::DiffFloat32),
-                    tsar::Stage::DataConvert(tsar::DataConvertMode::Float32ToBfloat16),
-                    tsar::Stage::ColumnarSplit(tsar::ColumnarSplitMode::Bfloat16),
-                ],
-                tsar::CompressionMode::Zstd,
-            );
+            let compressor = tsar::Compressor::new([
+                tsar::Stage::DeltaEncode(tsar::DeltaEncodeMode::DiffFloat32),
+                tsar::Stage::DataConvert(tsar::DataConvertMode::Float32ToBfloat16),
+                tsar::Stage::ColumnarSplit(tsar::ColumnarSplitMode::Bfloat16),
+                tsar::Stage::Compress(tsar::CompressMode::Zstd(0)),
+            ]);
             b.iter(|| {
                 use std::io::Cursor;
                 let mut buff = Cursor::new(&buf);
