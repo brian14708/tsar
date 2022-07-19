@@ -1,96 +1,77 @@
 use crate::{
-    executor::Executable,
-    executor::Operator,
-    operator::{
-        byte_count::ByteCount,
-        column_split::ColumnarSplit,
-        compress::{new_compress, new_decompress},
-        data_convert::DataConvert,
-        delta_encode::DeltaEncode,
-        multi_write::MultiWrite,
-        read_block::ReadBlock,
-    },
+    codec::{self, BufferList, Codec},
+    pb::tsar as pb,
+    result::Result,
+    DataType,
 };
 
-pub use crate::operator::{
-    column_split::ColumnarSplitMode, compress::CompressMode, data_convert::DataConvertMode,
-    delta_encode::DeltaEncodeMode,
-};
-
-#[derive(Clone)]
-pub enum Stage {
-    DeltaEncode(DeltaEncodeMode),
-    DataConvert(DataConvertMode),
-    ColumnarSplit(ColumnarSplitMode),
-    Compress(CompressMode),
-    Decompress(CompressMode),
+pub fn compress<'a>(
+    ty: DataType,
+    data: &'a [u8],
+    stages: impl IntoIterator<Item = &'a pb::CompressionStage>,
+) -> Result<(BufferList, f64)> {
+    let mut out = BufferList::new();
+    let mut tmp = BufferList::new();
+    let stages = stages.into_iter().copied().collect::<Vec<_>>();
+    for (idx, &s) in stages.iter().enumerate() {
+        if idx == 0 {
+            do_encode(s, [data], &mut out)?;
+        } else {
+            do_encode(s, tmp.iter_slice(), &mut out)?;
+        }
+        std::mem::swap(&mut out, &mut tmp);
+    }
+    let result = tmp.clone();
+    for &s in stages.iter().rev() {
+        do_decode(s, tmp.iter_slice(), &mut out)?;
+        std::mem::swap(&mut out, &mut tmp);
+    }
+    let err = ty.relative_error(data, tmp.iter().next().unwrap()).unwrap();
+    Ok((result, err))
 }
 
-pub struct Compressor {
-    stages: Vec<Stage>,
+fn do_encode<'a, I>(stage: pb::CompressionStage, data: I, out: &mut BufferList) -> Result<()>
+where
+    I: IntoIterator<Item = &'a [u8]>,
+    I::IntoIter: ExactSizeIterator,
+{
+    match stage {
+        pb::CompressionStage::INVALID_STAGE => todo!(),
+        pb::CompressionStage::ZSTD => codec::Compress::Zstd(9).encode(data, out),
+        pb::CompressionStage::CONVERT_FLOAT32_TO_BFLOAT16 => {
+            codec::Convert::Float32ToBfloat16.encode(data, out)
+        }
+        pb::CompressionStage::CONVERT_FLOAT64_TO_BFLOAT16 => {
+            codec::Convert::Float64ToBfloat16.encode(data, out)
+        }
+        pb::CompressionStage::CONVERT_FLOAT64_TO_FLOAT32 => {
+            codec::Convert::Float64ToFloat32.encode(data, out)
+        }
+        pb::CompressionStage::SPLIT_MANTISSA_BFLOAT16 => codec::Split::Bfloat16.encode(data, out),
+        pb::CompressionStage::SPLIT_MANTISSA_FLOAT32 => codec::Split::Float32.encode(data, out),
+        pb::CompressionStage::SPLIT_MANTISSA_FLOAT64 => codec::Split::Float64.encode(data, out),
+    }
 }
 
-impl Compressor {
-    const BLK_SIZE: usize = 128 * 1024;
-
-    #[must_use]
-    pub fn new(stages: impl IntoIterator<Item = Stage>) -> Self {
-        Self {
-            stages: Vec::from_iter(stages.into_iter()),
+fn do_decode<'a, I>(stage: pb::CompressionStage, data: I, out: &mut BufferList) -> Result<()>
+where
+    I: IntoIterator<Item = &'a [u8]>,
+    I::IntoIter: ExactSizeIterator,
+{
+    match stage {
+        pb::CompressionStage::INVALID_STAGE => todo!(),
+        pb::CompressionStage::ZSTD => codec::Compress::Zstd(9).decode(data, out),
+        pb::CompressionStage::CONVERT_FLOAT32_TO_BFLOAT16 => {
+            codec::Convert::Float32ToBfloat16.decode(data, out)
         }
-    }
-
-    fn build_graph<'p>(
-        stages: &Vec<Stage>,
-        mut n: Box<dyn Operator + 'p>,
-    ) -> Box<dyn Operator + 'p> {
-        for s in stages {
-            match s {
-                Stage::DeltaEncode(m) => n = DeltaEncode::new(n, *m),
-                Stage::DataConvert(m) => n = DataConvert::new(n, *m),
-                Stage::ColumnarSplit(m) => n = ColumnarSplit::new(n, *m),
-                Stage::Compress(m) => n = new_compress(n, *m),
-                Stage::Decompress(m) => n = new_decompress(n, *m),
-            };
+        pb::CompressionStage::CONVERT_FLOAT64_TO_BFLOAT16 => {
+            codec::Convert::Float64ToBfloat16.decode(data, out)
         }
-        n
-    }
-
-    pub fn compress_dryrun(
-        &self,
-        reader: &mut (impl std::io::Read + Clone),
-    ) -> std::io::Result<(usize, f64)> {
-        let mut compressed_size = 0;
-        {
-            let mut n: Box<dyn Operator> = ReadBlock::new(reader, Self::BLK_SIZE);
-            n = Self::build_graph(&self.stages, n);
-            n = ByteCount::new(n, &mut compressed_size);
-            n.execute_discard()?;
+        pb::CompressionStage::CONVERT_FLOAT64_TO_FLOAT32 => {
+            codec::Convert::Float64ToFloat32.decode(data, out)
         }
-        Ok((compressed_size, 0.0))
-    }
-
-    pub fn build_cgraph<'a>(&self, reader: &'a mut impl std::io::Read) -> Box<dyn Operator + 'a> {
-        let _out: Vec<Box<dyn std::io::Write>> = Vec::new();
-
-        let n: Box<dyn Operator> = ReadBlock::new(reader, Self::BLK_SIZE);
-        Self::build_graph(&self.stages, n)
-    }
-
-    pub fn compress(
-        &self,
-        reader: &mut impl std::io::Read,
-        mut fp: impl FnMut() -> std::io::Result<Box<dyn std::io::Write>>,
-    ) -> std::io::Result<usize> {
-        let mut out: Vec<Box<dyn std::io::Write>> = Vec::new();
-
-        let mut n: Box<dyn Operator> = ReadBlock::new(reader, Self::BLK_SIZE);
-        n = Self::build_graph(&self.stages, n);
-
-        for _ in 0..n.num_outputs() {
-            out.push(fp()?);
-        }
-        n = MultiWrite::new(n, out.iter_mut().map(|o| o as &mut dyn std::io::Write));
-        n.execute_discard()
+        pb::CompressionStage::SPLIT_MANTISSA_BFLOAT16 => codec::Split::Bfloat16.decode(data, out),
+        pb::CompressionStage::SPLIT_MANTISSA_FLOAT32 => codec::Split::Float32.decode(data, out),
+        pb::CompressionStage::SPLIT_MANTISSA_FLOAT64 => codec::Split::Float64.decode(data, out),
     }
 }

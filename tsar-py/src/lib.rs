@@ -2,7 +2,7 @@ use pyo3::prelude::*;
 
 #[pyclass(module = "tsar.tsar")]
 struct Writer {
-    w: tsar::writer::Writer<std::fs::File>,
+    w: tsar::write::Writer<std::fs::File>,
 }
 
 #[pymethods]
@@ -10,7 +10,7 @@ impl Writer {
     #[new]
     fn new(dst: &str) -> PyResult<Self> {
         Ok(Self {
-            w: tsar::writer::Writer::new(std::fs::File::create(dst)?),
+            w: tsar::write::Writer::new(std::fs::File::create(dst)?),
         })
     }
 
@@ -23,21 +23,33 @@ impl Writer {
         &mut self,
         ty: &str,
         name: &str,
-        offset: u64,
+        offset: usize,
         data: &[u8],
         dims: Vec<usize>,
         relative_error: f64,
     ) -> PyResult<()> {
-        let reader = std::io::Cursor::new(data);
+        let opt = tsar::write::BlobOption { relative_error };
+        let ty = match ty {
+            "f32" => Some(tsar::DataType::Float32),
+            "f64" => Some(tsar::DataType::Float64),
+            "f16" => Some(tsar::DataType::Float16),
+            "bf16" => Some(tsar::DataType::Bfloat16),
+            "i8" => Some(tsar::DataType::Int8),
+            "u8" => Some(tsar::DataType::Uint8),
+            "i16" => Some(tsar::DataType::Int16),
+            "u16" => Some(tsar::DataType::Uint16),
+            "i32" => Some(tsar::DataType::Int32),
+            "u32" => Some(tsar::DataType::Uint32),
+            "i64" => Some(tsar::DataType::Int64),
+            "u64" => Some(tsar::DataType::Uint64),
+            _ => None,
+        };
+
         match ty {
-            "f32" => self.w.write_blob_tensor_f32(
-                name,
-                offset,
-                reader,
-                &dims,
-                tsar::writer::WriteOption { relative_error },
-            ),
-            _ => self.w.write_blob(name, offset, reader),
+            Some(ty) => self.w.write_blob(name, offset, data, ty, &dims, opt),
+            _ => self
+                .w
+                .write_blob(name, offset, data, tsar::DataType::Byte, &[data.len()], opt),
         }
         .unwrap();
         Ok(())

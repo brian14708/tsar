@@ -42,27 +42,3 @@ pub const BF16_DATA: [half::bf16; 12] = [
     half::bf16::INFINITY,
     half::bf16::NEG_INFINITY,
 ];
-
-#[macro_export]
-macro_rules! assert_delta {
-    ($x:expr, $y:expr) => {
-        if $x.to_bits() == $y.to_bits() {
-            // ok
-        } else if $x == $x {
-            assert_eq!($x, $y);
-        } else {
-            // nan
-            assert_ne!($y, $y);
-        }
-    };
-    ($x:expr, $y:expr, $d:expr) => {
-        if $x.to_bits() == $y.to_bits() {
-            // ok
-        } else if $x == $x {
-            assert!($x - $y <= $d || $y - $x <= $d);
-        } else {
-            // nan
-            assert_ne!($y, $y);
-        }
-    };
-}

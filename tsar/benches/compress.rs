@@ -1,42 +1,29 @@
-use bytes::{BufMut, BytesMut};
-use criterion::BenchmarkId;
-use criterion::Throughput;
-use criterion::{criterion_group, criterion_main, Criterion};
-use rand::Rng;
+use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
 
-pub fn criterion_benchmark(c: &mut Criterion) {
-    static MB: usize = 1024 * 1024;
-    let mut rng = rand::thread_rng();
-    let mut group = c.benchmark_group("compress");
-
-    {
-        let size = &(16 * MB);
-        group.throughput(Throughput::Bytes(*size as u64));
-        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
-            let mut buf = BytesMut::with_capacity(size);
-            for _ in 0..(size / 4) {
-                buf.put_f32_le(rng.gen());
-            }
-            let buf: Vec<u8> = buf.freeze().iter().cloned().collect();
-            let compressor = tsar::Compressor::new([
-                tsar::Stage::DeltaEncode(tsar::DeltaEncodeMode::DiffFloat32),
-                tsar::Stage::DataConvert(tsar::DataConvertMode::Float32ToBfloat16),
-                tsar::Stage::ColumnarSplit(tsar::ColumnarSplitMode::Bfloat16),
-                tsar::Stage::Compress(tsar::CompressMode::Zstd(0)),
-            ]);
-            b.iter(|| {
-                use std::io::Cursor;
-                let mut buff = Cursor::new(&buf);
-                let mut i = 0;
-                compressor
-                    .compress(&mut buff, || {
-                        i += 1;
-                        Ok(Box::new(std::fs::File::create(format!("/tmp/tsar.{}", i))?))
-                    })
-                    .unwrap();
-            });
-        });
-    }
+fn criterion_benchmark(c: &mut Criterion) {
+    const N: usize = 1024 * 1024;
+    let mut group = c.benchmark_group("diff");
+    group.throughput(Throughput::Bytes(N as u64));
+    group.bench_function("byte", |b| {
+        let src = vec![0; N];
+        let targ = (0..N).map(|i| i as u8).collect::<Vec<_>>();
+        b.iter(|| tsar::DataType::Byte.relative_error(black_box(&src), black_box(&targ)))
+    });
+    group.bench_function("i32", |b| {
+        let src = vec![0; N];
+        let targ = (0..N).map(|i| i as u8).collect::<Vec<_>>();
+        b.iter(|| tsar::DataType::Int32.relative_error(black_box(&src), black_box(&targ)))
+    });
+    group.bench_function("u32", |b| {
+        let src = vec![0; N];
+        let targ = (0..N).map(|i| i as u8).collect::<Vec<_>>();
+        b.iter(|| tsar::DataType::Uint32.relative_error(black_box(&src), black_box(&targ)))
+    });
+    group.bench_function("f32", |b| {
+        let src = vec![0; N];
+        let targ = vec![0; N];
+        b.iter(|| tsar::DataType::Float32.relative_error(black_box(&src), black_box(&targ)))
+    });
     group.finish();
 }
 
