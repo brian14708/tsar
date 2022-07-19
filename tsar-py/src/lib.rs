@@ -19,26 +19,31 @@ impl Writer {
         Ok(())
     }
 
-    pub fn write_blob_f32(
+    pub fn write_blob(
         &mut self,
+        ty: &str,
         name: &str,
+        offset: u64,
         data: &[u8],
         dims: Vec<usize>,
         level: i32,
         relative_error: f64,
     ) -> PyResult<()> {
-        self.w
-            .write_blob_tensor_f32(
+        let reader = std::io::Cursor::new(data);
+        match ty {
+            "f32" => self.w.write_blob_tensor_f32(
                 name,
-                0,
-                std::io::Cursor::new(data),
+                offset,
+                reader,
                 &dims,
                 tsar::writer::WriteOption {
                     level,
                     relative_error,
                 },
-            )
-            .unwrap();
+            ),
+            _ => self.w.write_blob(name, offset, reader),
+        }
+        .unwrap();
         Ok(())
     }
 

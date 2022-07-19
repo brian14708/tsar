@@ -73,29 +73,32 @@ def save(
         if not re.match('^[^<>:;,?"*|/]+$', tensor_location):
             tensor_location = f"__tensor_{idx}"
         tensor_location = str(pathlib.Path("data") / name / tensor_location)
-        save_external = False
+        save_external = None
 
         if tensor.data_type == onnx.TensorProto.FLOAT:
             if (
                 tensor.HasField("raw_data")
                 and sys.getsizeof(tensor.raw_data) >= size_limit
             ):
-                dst.write_blob_f32(
-                    tensor_location, tensor.raw_data, list(tensor.dims), level, error
-                )
+                save_external = ("f32", tensor.raw_data)
                 tensor.ClearField("raw_data")
-                save_external = True
             elif len(tensor.float_data) * 4 >= size_limit:
                 data = array.array("f")
                 for val in tensor.float_data:
                     data.append(val)
-                dst.write_blob_f32(
-                    tensor_location, data.tobytes(), list(tensor.dims), level, error
-                )
+                save_external = ("f32", data.tobytes())
                 tensor.ClearField("float_data")
-                save_external = True
 
         if save_external:
+            dst.write_blob(
+                save_external[0],
+                tensor_location,
+                0,
+                save_external[1],
+                list(tensor.dims),
+                level,
+                error,
+            )
             blob_list.append(tensor_location)
             tensor.name = tensor_location
             tensor.data_location = onnx.TensorProto.EXTERNAL

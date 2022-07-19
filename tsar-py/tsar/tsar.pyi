@@ -2,9 +2,11 @@ from typing import Optional
 
 class Writer:
     def __init__(self, dst: str): ...
-    def write_blob_f32(
+    def write_blob(
         self,
+        type: str,
         name: str,
+        offset: int,
         data: bytes,
         shape: list[int],
         level: int,
