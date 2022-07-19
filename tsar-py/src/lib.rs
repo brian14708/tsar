@@ -26,7 +26,6 @@ impl Writer {
         offset: u64,
         data: &[u8],
         dims: Vec<usize>,
-        level: i32,
         relative_error: f64,
     ) -> PyResult<()> {
         let reader = std::io::Cursor::new(data);
@@ -36,10 +35,7 @@ impl Writer {
                 offset,
                 reader,
                 &dims,
-                tsar::writer::WriteOption {
-                    level,
-                    relative_error,
-                },
+                tsar::writer::WriteOption { relative_error },
             ),
             _ => self.w.write_blob(name, offset, reader),
         }

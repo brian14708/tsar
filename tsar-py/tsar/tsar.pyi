@@ -9,7 +9,6 @@ class Writer:
         offset: int,
         data: bytes,
         shape: list[int],
-        level: int,
         error: float,
     ) -> None: ...
     def write_file(

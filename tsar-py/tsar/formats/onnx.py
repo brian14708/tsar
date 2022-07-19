@@ -61,7 +61,6 @@ def save(
     name: str,
     src: pathlib.Path,
     dst: _tsar.Writer,
-    level: int,
     error: float,
     size_limit: int = 16 * 1024,
 ):
@@ -96,7 +95,6 @@ def save(
                 0,
                 save_external[1],
                 list(tensor.dims),
-                level,
                 error,
             )
             blob_list.append(tensor_location)

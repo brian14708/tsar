@@ -8,8 +8,7 @@ from tsar import writer
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--level", default=1, type=int, choices=[0, 1, 2])
-    parser.add_argument("-e", "--relative-error", default=1e-6, type=float)
+    parser.add_argument("-e", "--relative-error", default=1e-3, type=float)
     parser.add_argument("srcs", nargs="+", metavar="INPUT", type=pathlib.Path)
     parser.add_argument("dst", metavar="OUTPUT", type=pathlib.Path)
     args = parser.parse_args()
@@ -22,7 +21,6 @@ def main() -> None:
                     src.name,
                     src,
                     wobj,
-                    args.level,
                     args.relative_error,
                 )
             else:
