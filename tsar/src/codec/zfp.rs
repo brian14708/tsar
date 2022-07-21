@@ -1,3 +1,6 @@
+#[cfg(windows)]
+use zfp_sys_cc as zfp_sys;
+
 use crate::result::{Error, Result};
 use crate::DataType;
 

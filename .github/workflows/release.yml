@@ -16,6 +16,7 @@ jobs:
       with:
         manylinux: auto
         command: build
+        container: messense/manylinux2014-cross:x86_64
         args: --manifest-path tsar-py/Cargo.toml --release -o dist
     - name: Upload wheels
       uses: actions/upload-artifact@v3
@@ -27,6 +28,9 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v3
+    - uses: KyleMayes/install-llvm-action@v1.5.4
+      with:
+        version: "12.0"
     - uses: messense/maturin-action@v1
       with:
         command: build
