@@ -6,6 +6,8 @@ pub enum Error {
     Zip(#[from] zip::result::ZipError),
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("ZPF error")]
+    ZPFUnknown,
     #[error("unknown error")]
     Unknown,
 }

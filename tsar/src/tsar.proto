@@ -17,6 +17,10 @@ enum CompressionStage {
   SPLIT_MANTISSA_FLOAT32 = 20;
   SPLIT_MANTISSA_FLOAT64 = 21;
   SPLIT_MANTISSA_BFLOAT16 = 22;
+
+  // zfp
+  ZFP_FLOAT32_1D = 30;
+  ZFP_FLOAT64_1D = 31;
 }
 
 enum DataType {

@@ -20,7 +20,7 @@ def progress(count, total, status=""):
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--relative-error", default=4e-3, type=float)
+    parser.add_argument("-e", "--error", default=1e-6, type=float)
     parser.add_argument("srcs", nargs="+", metavar="INPUT", type=pathlib.Path)
     parser.add_argument("dst", metavar="OUTPUT", type=pathlib.Path)
     args = parser.parse_args()
@@ -33,7 +33,7 @@ def main() -> None:
                     src.name,
                     src,
                     wobj,
-                    args.relative_error,
+                    args.error,
                     progress_fn=progress,
                 )
             elif src.suffix == ".json":

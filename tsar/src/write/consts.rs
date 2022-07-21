@@ -1,9 +1,8 @@
 use crate::{pb::tsar as pb, DataType};
 
-macro_rules! with_default_methods {
+macro_rules! methods {
     ($($e:expr),* $(,)*) => {
         &[
-            &[pb::CompressionStage::ZSTD],
             $(&$e,)*
         ]
     };
@@ -12,7 +11,8 @@ macro_rules! with_default_methods {
 pub const COMPRESS_METHOD: [(DataType, &[&[pb::CompressionStage]]); 13] = [
     (
         DataType::Float32,
-        with_default_methods![
+        methods![
+            [pb::CompressionStage::ZFP_FLOAT32_1D],
             [
                 pb::CompressionStage::SPLIT_MANTISSA_FLOAT32,
                 pb::CompressionStage::ZSTD,
@@ -26,7 +26,8 @@ pub const COMPRESS_METHOD: [(DataType, &[&[pb::CompressionStage]]); 13] = [
     ),
     (
         DataType::Float64,
-        with_default_methods![
+        methods![
+            [pb::CompressionStage::ZFP_FLOAT64_1D],
             [
                 pb::CompressionStage::SPLIT_MANTISSA_FLOAT64,
                 pb::CompressionStage::ZSTD,
@@ -45,19 +46,22 @@ pub const COMPRESS_METHOD: [(DataType, &[&[pb::CompressionStage]]); 13] = [
     ),
     (
         DataType::Bfloat16,
-        with_default_methods![[
-            pb::CompressionStage::SPLIT_MANTISSA_BFLOAT16,
-            pb::CompressionStage::ZSTD,
-        ],],
+        methods![
+            [pb::CompressionStage::ZSTD],
+            [
+                pb::CompressionStage::SPLIT_MANTISSA_BFLOAT16,
+                pb::CompressionStage::ZSTD,
+            ],
+        ],
     ),
-    (DataType::Byte, with_default_methods![]),
-    (DataType::Float16, with_default_methods![]),
-    (DataType::Int8, with_default_methods![]),
-    (DataType::Uint8, with_default_methods![]),
-    (DataType::Int16, with_default_methods![]),
-    (DataType::Uint16, with_default_methods![]),
-    (DataType::Int32, with_default_methods![]),
-    (DataType::Uint32, with_default_methods![]),
-    (DataType::Int64, with_default_methods![]),
-    (DataType::Uint64, with_default_methods![]),
+    (DataType::Byte, methods![[pb::CompressionStage::ZSTD],]),
+    (DataType::Float16, methods![[pb::CompressionStage::ZSTD],]),
+    (DataType::Int8, methods![[pb::CompressionStage::ZSTD],]),
+    (DataType::Uint8, methods![[pb::CompressionStage::ZSTD],]),
+    (DataType::Int16, methods![[pb::CompressionStage::ZSTD],]),
+    (DataType::Uint16, methods![[pb::CompressionStage::ZSTD],]),
+    (DataType::Int32, methods![[pb::CompressionStage::ZSTD],]),
+    (DataType::Uint32, methods![[pb::CompressionStage::ZSTD],]),
+    (DataType::Int64, methods![[pb::CompressionStage::ZSTD],]),
+    (DataType::Uint64, methods![[pb::CompressionStage::ZSTD],]),
 ];

@@ -26,9 +26,9 @@ impl Writer {
         offset: usize,
         data: &[u8],
         dims: Vec<usize>,
-        relative_error: f64,
+        error_limit: f64,
     ) -> PyResult<()> {
-        let opt = tsar::write::BlobOption { relative_error };
+        let opt = tsar::write::BlobOption { error_limit };
         let ty = match ty {
             "f32" => Some(tsar::DataType::Float32),
             "f64" => Some(tsar::DataType::Float64),

@@ -22,7 +22,7 @@ pub struct Writer<W: Write + Seek> {
 
 #[derive(Default)]
 pub struct BlobOption {
-    pub relative_error: f64,
+    pub error_limit: f64,
 }
 
 impl<W: Write + Seek> Writer<W> {
@@ -53,20 +53,21 @@ impl<W: Write + Seek> Writer<W> {
         name: impl Into<String>,
         offset: usize,
         data: &'a [u8],
-        ty: DataType,
+        dt: DataType,
         dims: impl IntoIterator<Item = &'a usize>,
         opt: BlobOption,
     ) -> Result<()> {
+        let shape = dims.into_iter().copied().collect::<Vec<_>>();
         let mut b = pb::Blob {
             file_offset_in_bytes: offset as i64,
-            dims: dims.into_iter().map(|v| *v as i64).collect(),
-            data_type: EnumOrUnknown::new(ty.into()),
+            dims: shape.iter().map(|&f| f as i64).collect(),
+            data_type: EnumOrUnknown::new(dt.into()),
             ..Default::default()
         };
 
         let cand_stages = consts::COMPRESS_METHOD
             .iter()
-            .find(|(t, _)| *t == ty)
+            .find(|(t, _)| *t == dt)
             .map(|(_, m)| *m)
             .unwrap_or_default();
 
@@ -74,24 +75,24 @@ impl<W: Write + Seek> Writer<W> {
         let mut sizes = cand_stages
             .iter()
             .enumerate()
-            .map(|(i, &stages)| {
-                let (r, e) = compress::compress(ty, blk, stages)?;
+            .flat_map(|(i, &stages)| -> Result<_> {
+                let (r, e) = compress::compress(
+                    blk,
+                    dt,
+                    &[blk.len() / dt.byte_size()],
+                    stages,
+                    opt.error_limit,
+                )?;
                 Ok((i, r.iter().map(Vec::len).sum::<usize>(), e))
             })
-            .filter(|o| {
-                if let &Ok((_, _, e)) = o {
-                    e <= opt.relative_error
-                } else {
-                    true
-                }
-            })
-            .collect::<Result<Vec<_>>>()?;
+            .filter(|&(_, _, e)| e <= opt.error_limit)
+            .collect::<Vec<_>>();
         sizes.sort_by_key(|(_, sz, _)| *sz);
 
         for (idx, _, _) in sizes {
             let stages = cand_stages[idx];
-            let (output, err) = compress::compress(ty, data, stages)?;
-            if err > opt.relative_error {
+            let (output, err) = compress::compress(data, dt, &shape, stages, opt.error_limit)?;
+            if err > opt.error_limit {
                 continue;
             }
 

@@ -57,7 +57,7 @@ macro_rules! diff_float {
                 Some(Ordering::Greater) => (targ - src),
                 None => return None,
             };
-            let denom = src.abs().max(targ.abs());
+            let denom = 1.0; // src.abs().max(targ.abs());
             if err * denom < num {
                 err = num / denom;
             }
@@ -83,7 +83,7 @@ macro_rules! diff_int {
                     Ordering::Less => (src - targ).as_(),
                     Ordering::Greater => (targ - src).as_(),
                 };
-                let denom: f64 = src.abs().max(targ.abs()).as_();
+                let denom: f64 = 1.0; // src.abs().max(targ.abs()).as_();
                 if err * denom < num {
                     num / denom
                 } else {
@@ -109,7 +109,7 @@ macro_rules! diff_int {
                     Ordering::Less => (src - targ).as_(),
                     Ordering::Greater => (targ - src).as_(),
                 };
-                let denom: f64 = src.max(targ).as_();
+                let denom: f64 = 1.0; // src.max(targ).as_();
                 if err * denom < num {
                     num / denom
                 } else {
@@ -121,7 +121,7 @@ macro_rules! diff_int {
 }
 
 impl DataType {
-    pub fn relative_error(&self, src: &[u8], targ: &[u8]) -> Option<f64> {
+    pub fn max_difference(&self, src: &[u8], targ: &[u8]) -> Option<f64> {
         if src.len() != targ.len() {
             return None;
         }
@@ -164,6 +164,24 @@ impl DataType {
             DataType::Uint64 => diff_int!(unsigned, u64, src, targ),
         }
     }
+
+    pub fn byte_size(&self) -> usize {
+        match self {
+            DataType::Byte => 1,
+            DataType::Float32 => 4,
+            DataType::Float64 => 8,
+            DataType::Float16 => 2,
+            DataType::Bfloat16 => 2,
+            DataType::Int8 => 1,
+            DataType::Uint8 => 1,
+            DataType::Int16 => 2,
+            DataType::Uint16 => 2,
+            DataType::Int32 => 4,
+            DataType::Uint32 => 4,
+            DataType::Int64 => 8,
+            DataType::Uint64 => 8,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -176,11 +194,11 @@ mod tests {
     fn byte_diff() {
         let src = vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09];
         let targ = vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09];
-        assert_eq!(DataType::Byte.relative_error(&src, &targ), Some(0.0));
+        assert_eq!(DataType::Byte.max_difference(&src, &targ), Some(0.0));
         let targ = vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
-        assert_eq!(DataType::Byte.relative_error(&src, &targ), None);
+        assert_eq!(DataType::Byte.max_difference(&src, &targ), None);
         let targ = vec![0x00, 0x01, 0x02, 0x00, 0x04, 0x05, 0x06, 0x07, 0x08, 0x00];
-        assert_eq!(DataType::Byte.relative_error(&src, &targ), Some(4.0));
+        assert_eq!(DataType::Byte.max_difference(&src, &targ), Some(4.0));
     }
 
     #[test]
@@ -194,11 +212,11 @@ mod tests {
         };
         let src = write(&[0.0, 1.0, 2.0, -3.0, 4.0, 5.0, 6.0]);
         let targ = write(&[0.0, 1.0, 2.0, -3.0, 4.0, 5.0, 6.0]);
-        assert_eq!(DataType::Float32.relative_error(&src, &targ), Some(0.0));
+        assert_eq!(DataType::Float32.max_difference(&src, &targ), Some(0.0));
         let targ = write(&[0.0, 1.0, 2.0, -3.0, 4.0, 5.0]);
-        assert_eq!(DataType::Float32.relative_error(&src, &targ), None);
+        assert_eq!(DataType::Float32.max_difference(&src, &targ), None);
         let targ = write(&[0.0, 1.0, 2.0, -2.0, 4.0, 5.0, 3.0]);
-        assert_eq!(DataType::Float32.relative_error(&src, &targ), Some(0.5));
+        assert_eq!(DataType::Float32.max_difference(&src, &targ), Some(3.0));
     }
 
     #[test]
@@ -212,14 +230,11 @@ mod tests {
         };
         let src = write(&[1.0, 2.0, -3.0, 4.0, 5.0, 6.0]);
         let targ = write(&[1.0, 2.0, -3.0, 4.0, 5.0, 6.0]);
-        assert_eq!(DataType::Float64.relative_error(&src, &targ), Some(0.0));
+        assert_eq!(DataType::Float64.max_difference(&src, &targ), Some(0.0));
         let targ = write(&[1.0, 2.0, -3.0, 4.0, 5.0]);
-        assert_eq!(DataType::Float64.relative_error(&src, &targ), None);
+        assert_eq!(DataType::Float64.max_difference(&src, &targ), None);
         let targ = write(&[1.0, 2.0, -1.0, 4.0, 5.0, 3.0]);
-        assert_eq!(
-            DataType::Float64.relative_error(&src, &targ),
-            Some(2.0 / 3.0)
-        );
+        assert_eq!(DataType::Float64.max_difference(&src, &targ), Some(3.0));
     }
 
     #[test]
@@ -233,11 +248,11 @@ mod tests {
         };
         let src = write(&[1, 2, 3, 4, 5, 6]);
         let targ = write(&[1, 2, 3, 4, 5, 6]);
-        assert_eq!(DataType::Int64.relative_error(&src, &targ), Some(0.0));
+        assert_eq!(DataType::Int64.max_difference(&src, &targ), Some(0.0));
         let targ = write(&[1, 2, 3, 4, 5]);
-        assert_eq!(DataType::Int64.relative_error(&src, &targ), None);
+        assert_eq!(DataType::Int64.max_difference(&src, &targ), None);
         let targ = write(&[1, 2, 1, 4, 5, 3]);
-        assert_eq!(DataType::Int64.relative_error(&src, &targ), Some(2.0 / 3.0));
+        assert_eq!(DataType::Int64.max_difference(&src, &targ), Some(3.0));
     }
 
     #[test]
@@ -251,13 +266,10 @@ mod tests {
         };
         let src = write(&[1, 2, 3, 4, 5, 6]);
         let targ = write(&[1, 2, 3, 4, 5, 6]);
-        assert_eq!(DataType::Uint64.relative_error(&src, &targ), Some(0.0));
+        assert_eq!(DataType::Uint64.max_difference(&src, &targ), Some(0.0));
         let targ = write(&[1, 2, 3, 4, 5]);
-        assert_eq!(DataType::Uint64.relative_error(&src, &targ), None);
+        assert_eq!(DataType::Uint64.max_difference(&src, &targ), None);
         let targ = write(&[1, 2, 1, 4, 5, 3]);
-        assert_eq!(
-            DataType::Uint64.relative_error(&src, &targ),
-            Some(2.0 / 3.0)
-        );
+        assert_eq!(DataType::Uint64.max_difference(&src, &targ), Some(3.0));
     }
 }

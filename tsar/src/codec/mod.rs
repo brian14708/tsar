@@ -7,10 +7,12 @@ mod convert;
 mod split;
 #[cfg(test)]
 mod test_util;
+mod zfp;
 
 pub use compress::Compress;
 pub use convert::Convert;
 pub use split::Split;
+pub use zfp::Zfp;
 
 use crate::result::Result;
 
