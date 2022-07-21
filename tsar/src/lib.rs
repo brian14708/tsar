@@ -3,11 +3,17 @@
 mod codec;
 mod compress;
 mod data_type;
-pub mod result;
-pub mod write;
+mod paths;
+mod read;
+mod result;
+mod write;
 
-mod pb {
+mod pbgen {
     include!(concat!(env!("OUT_DIR"), "/pb/mod.rs"));
 }
 
 pub use data_type::DataType;
+pub use pbgen::tsar as pb;
+pub use read::Archive;
+pub use result::{Error, Result};
+pub use write::{BlobWriteOption, Builder};

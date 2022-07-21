@@ -1,4 +1,4 @@
-use crate::pb::tsar as pb;
+use crate::pb;
 
 use core::cmp::Ordering;
 use num_traits::cast::AsPrimitive;
@@ -36,6 +36,29 @@ impl From<DataType> for pb::DataType {
             DataType::Uint32 => pb::DataType::UINT32,
             DataType::Int64 => pb::DataType::INT64,
             DataType::Uint64 => pb::DataType::UINT64,
+        }
+    }
+}
+
+impl TryFrom<pb::DataType> for DataType {
+    type Error = pb::DataType;
+
+    fn try_from(value: pb::DataType) -> Result<Self, Self::Error> {
+        match value {
+            pb::DataType::BYTE => Ok(DataType::Byte),
+            pb::DataType::FLOAT32 => Ok(DataType::Float32),
+            pb::DataType::FLOAT64 => Ok(DataType::Float64),
+            pb::DataType::FLOAT16 => Ok(DataType::Float16),
+            pb::DataType::BFLOAT16 => Ok(DataType::Bfloat16),
+            pb::DataType::INT8 => Ok(DataType::Int8),
+            pb::DataType::UINT8 => Ok(DataType::Uint8),
+            pb::DataType::INT16 => Ok(DataType::Int16),
+            pb::DataType::UINT16 => Ok(DataType::Uint16),
+            pb::DataType::INT32 => Ok(DataType::Int32),
+            pb::DataType::UINT32 => Ok(DataType::Uint32),
+            pb::DataType::INT64 => Ok(DataType::Int64),
+            pb::DataType::UINT64 => Ok(DataType::Uint64),
+            v => Err(v),
         }
     }
 }
@@ -165,7 +188,7 @@ impl DataType {
         }
     }
 
-    pub fn byte_size(&self) -> usize {
+    pub fn byte_len(&self) -> usize {
         match self {
             DataType::Byte => 1,
             DataType::Float32 => 4,

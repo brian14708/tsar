@@ -9,23 +9,23 @@ use protobuf::{CodedOutputStream, EnumOrUnknown, Message};
 use sha1::{Digest, Sha1};
 use zip::write::FileOptions;
 
-use crate::{compress, pb::tsar as pb, result::Result, DataType};
+use crate::{compress, paths, pb, result::Result, DataType};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const METADATA_FILE: &str = ".tsar/bundle";
 
-pub struct Writer<W: Write + Seek> {
+pub struct Builder<W: Write + Seek> {
     z: zip::write::ZipWriter<W>,
     meta: pb::Bundle,
     chunks: HashSet<String>,
 }
 
 #[derive(Default)]
-pub struct BlobOption {
+pub struct BlobWriteOption {
     pub error_limit: f64,
+    pub target_file: Option<(String, u64)>,
 }
 
-impl<W: Write + Seek> Writer<W> {
+impl<W: Write + Seek> Builder<W> {
     pub fn new(inner: W) -> Self {
         let mut z = zip::write::ZipWriter::new(inner);
         z.set_comment(format!("tsar v{}", VERSION));
@@ -36,7 +36,7 @@ impl<W: Write + Seek> Writer<W> {
         }
     }
 
-    pub fn write_file(&mut self, name: impl Into<String>, mut reader: impl Read) -> Result<()> {
+    pub fn add_file(&mut self, name: impl Into<String>, mut reader: impl Read) -> Result<()> {
         let name = name.into();
         self.z
             .start_file(name.clone(), FileOptions::default().large_file(true))?;
@@ -48,22 +48,25 @@ impl<W: Write + Seek> Writer<W> {
         Ok(())
     }
 
-    pub fn write_blob<'a>(
+    pub fn add_blob<'a>(
         &mut self,
         name: impl Into<String>,
-        offset: usize,
         data: &'a [u8],
         dt: DataType,
         dims: impl IntoIterator<Item = &'a usize>,
-        opt: BlobOption,
+        opt: BlobWriteOption,
     ) -> Result<()> {
         let shape = dims.into_iter().copied().collect::<Vec<_>>();
         let mut b = pb::Blob {
-            file_offset_in_bytes: offset as i64,
+            name: name.into(),
             dims: shape.iter().map(|&f| f as i64).collect(),
             data_type: EnumOrUnknown::new(dt.into()),
             ..Default::default()
         };
+        if let Some((f, o)) = opt.target_file {
+            b.target_file_name = f;
+            b.target_offset_in_bytes = o as i64;
+        }
 
         let cand_stages = consts::COMPRESS_METHOD
             .iter()
@@ -79,7 +82,7 @@ impl<W: Write + Seek> Writer<W> {
                 let (r, e) = compress::compress(
                     blk,
                     dt,
-                    &[blk.len() / dt.byte_size()],
+                    &[blk.len() / dt.byte_len()],
                     stages,
                     opt.error_limit,
                 )?;
@@ -101,20 +104,18 @@ impl<W: Write + Seek> Writer<W> {
                 .cloned()
                 .map(EnumOrUnknown::new)
                 .collect();
-            return self.write_chunks(name.into(), b, output.iter_slice());
+            return self.write_chunks(b, output.iter_slice());
         }
 
         b.compression_stages.clear();
-        self.write_chunks(name.into(), b, [data])
+        self.write_chunks(b, [data])
     }
 
     pub fn finish(&mut self) -> Result<()> {
-        self.z.start_file(METADATA_FILE, FileOptions::default())?;
-        self.meta.blob_files.sort_by(|a, b| a.name.cmp(&b.name));
-        for f in self.meta.blob_files.iter_mut() {
-            f.blobs
-                .sort_by(|a, b| a.file_offset_in_bytes.cmp(&b.file_offset_in_bytes))
-        }
+        self.z
+            .start_file(paths::BUNDLE_META_PATH, FileOptions::default())?;
+        self.meta.blobs.sort_by(|a, b| a.name.cmp(&b.name));
+        // TODO check target_file contiguous
         self.meta
             .write_to(&mut CodedOutputStream::new(&mut self.z))
             .unwrap();
@@ -124,7 +125,6 @@ impl<W: Write + Seek> Writer<W> {
 
     fn write_chunks<'a>(
         &mut self,
-        name: String,
         mut blob: pb::Blob,
         iter: impl IntoIterator<Item = &'a [u8]>,
     ) -> Result<()> {
@@ -133,7 +133,7 @@ impl<W: Write + Seek> Writer<W> {
 
             if !self.chunks.contains(&result) {
                 self.z.start_file(
-                    format!(".tsar/chunk/{}", result),
+                    paths::chunk_path(&result),
                     FileOptions::default()
                         .compression_method(if blob.compression_stages.is_empty() {
                             // use zip compression when no custom compression stage
@@ -149,15 +149,7 @@ impl<W: Write + Seek> Writer<W> {
             blob.chunk_ids.push(result);
         }
 
-        if let Some(f) = self.meta.blob_files.iter_mut().find(|f| f.name == name) {
-            f.blobs.push(blob);
-        } else {
-            self.meta.blob_files.push(pb::BlobFile {
-                name,
-                blobs: vec![blob],
-                ..Default::default()
-            });
-        }
+        self.meta.blobs.push(blob);
         Ok(())
     }
 }

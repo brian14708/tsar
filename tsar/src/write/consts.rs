@@ -1,4 +1,4 @@
-use crate::{pb::tsar as pb, DataType};
+use crate::{pb, DataType};
 
 macro_rules! methods {
     ($($e:expr),* $(,)*) => {

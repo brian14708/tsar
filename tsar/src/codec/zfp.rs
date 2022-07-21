@@ -112,10 +112,7 @@ impl Codec for Zfp<'_> {
         let data = data.next().unwrap();
         out.reset(1);
 
-        out[0].resize(
-            self.shape.iter().product::<usize>() * self.dt.byte_size(),
-            0,
-        );
+        out[0].resize(self.shape.iter().product::<usize>() * self.dt.byte_len(), 0);
 
         let field = unsafe { self.new_field(out[0].as_mut_ptr() as *mut std::ffi::c_void) };
 

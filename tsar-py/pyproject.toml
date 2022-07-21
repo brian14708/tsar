@@ -14,11 +14,13 @@ classifiers = [
 
 [project.scripts]
 tsar-pack = "tsar.tools.pack:main"
+tsar-unpack = "tsar.tools.unpack:main"
 
 [tool.pylint]
 disable = [
     "missing-module-docstring",
     "missing-function-docstring",
+    "invalid-name",
 ]
 extension-pkg-allow-list = ["tsar.tsar"]
 generated-members = ["onnx.*Proto"]

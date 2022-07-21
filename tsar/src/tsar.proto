@@ -41,21 +41,19 @@ enum DataType {
 }
 
 message Blob {
-  DataType data_type = 1;
-  repeated int64 dims = 2;
-  int64 file_offset_in_bytes = 3;
+  string name = 1;
+  DataType data_type = 2;
+  repeated int64 dims = 3;
   repeated string chunk_ids = 4;
   repeated CompressionStage compression_stages = 5;
-}
 
-message BlobFile {
-  string name = 1;
-  repeated Blob blobs = 2;
+  string target_file_name = 6;
+  int64 target_offset_in_bytes = 7;
 }
 
 message RawFile { string name = 1; }
 
 message Bundle {
   repeated RawFile raw_files = 1;
-  repeated BlobFile blob_files = 2;
+  repeated Blob blobs = 2;
 }

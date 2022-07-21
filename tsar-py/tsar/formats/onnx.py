@@ -2,7 +2,6 @@ import pathlib
 import sys
 import itertools
 import array
-import re
 import json
 from typing import Callable, Iterable
 import onnx
@@ -68,13 +67,12 @@ def save(
     model = onnx.load(str(src))
     tensors = list(_get_all_tensors(model))
     blob_list = []
+    tensor_location = str(pathlib.Path(name).with_suffix(".data"))
+    tensor_offset = 0
     for idx, tensor in enumerate(tensors):
         if progress_fn:
             progress_fn(idx, len(tensors))
-        tensor_location = tensor.name
-        if not re.match('^[^<>:;,?"*|/]+$', tensor_location):
-            tensor_location = f"__tensor_{idx}"
-        tensor_location = str(pathlib.Path("data") / name / tensor_location)
+        tensor_name = f"{name}/{tensor.name}"
         save_external = None
 
         if tensor.data_type == onnx.TensorProto.FLOAT:
@@ -251,19 +249,25 @@ def save(
         if save_external:
             dst.write_blob(
                 save_external[0],
-                tensor_location,
-                0,
+                tensor_name,
                 save_external[1],
                 list(tensor.dims),
                 error,
+                (tensor_location, tensor_offset),
             )
-            blob_list.append(tensor_location)
-            tensor.name = tensor_location
+            blob_list.append(tensor_name)
+            tensor.name = tensor_name
             tensor.data_location = onnx.TensorProto.EXTERNAL
             tensor.ClearField("external_data")
-            entry = tensor.external_data.add()
-            entry.key = "location"
-            entry.value = tensor_location
+            for (k, v) in {
+                "location": tensor_location,
+                "offset": tensor_offset,
+                "length": len(save_external[1]),
+            }.items():
+                entry = tensor.external_data.add()
+                entry.key = k
+                entry.value = str(v)
+            tensor_offset += len(save_external[1])
 
     if progress_fn:
         progress_fn(len(tensors), len(tensors))

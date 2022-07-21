@@ -1,6 +1,6 @@
 use crate::{
     codec::{self, BufferList, Codec},
-    pb::tsar as pb,
+    pb,
     result::Result,
     DataType,
 };
@@ -9,12 +9,11 @@ pub fn compress<'a>(
     data: &'a [u8],
     dt: DataType,
     shape: &'a [usize],
-    stages: impl IntoIterator<Item = &'a pb::CompressionStage>,
+    stages: &'a [pb::CompressionStage],
     target_prec: f64,
 ) -> Result<(BufferList, f64)> {
     let mut out = BufferList::new();
     let mut tmp = BufferList::new();
-    let stages = stages.into_iter().copied().collect::<Vec<_>>();
     for (idx, &s) in stages.iter().enumerate() {
         if idx == 0 {
             do_encode(s, [data], dt, shape, target_prec, &mut out)?;
@@ -30,6 +29,21 @@ pub fn compress<'a>(
     }
     let err = dt.max_difference(data, tmp.iter().next().unwrap()).unwrap();
     Ok((result, err))
+}
+
+pub fn decompress<'a>(
+    mut data: BufferList,
+    dt: DataType,
+    shape: &'a [usize],
+    stages: &'a [pb::CompressionStage],
+) -> Result<Vec<u8>> {
+    let mut out = BufferList::new();
+    for &s in stages.iter().rev() {
+        do_decode(s, data.iter_slice(), dt, shape, &mut out)?;
+        std::mem::swap(&mut out, &mut data);
+    }
+    assert_eq!(data.len(), 1);
+    Ok(std::mem::take(&mut data[0]))
 }
 
 fn do_encode<'a, I>(
