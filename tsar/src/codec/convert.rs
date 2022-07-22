@@ -41,9 +41,16 @@ macro_rules! cvt_type_blk {
                 $out.extend_from_slice(&v.to_le_bytes());
             });
         });
-        r.chunks_exact(NS).for_each(|buf| {
-            let curr: $dst = <$src>::from_le_bytes(buf.try_into().unwrap()).as_();
-            $out.extend_from_slice(&curr.to_le_bytes());
+
+        src_tmp
+            .iter_mut()
+            .zip(r.chunks_exact(NS))
+            .for_each(|(s, b)| {
+                *s = <$src>::from_le_bytes(b.try_into().unwrap());
+            });
+        $fun(&mut dst_tmp, &src_tmp);
+        dst_tmp.iter().take(r.len()).for_each(|v| {
+            $out.extend_from_slice(&v.to_le_bytes());
         });
     };
 }

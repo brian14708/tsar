@@ -1,7 +1,6 @@
 use crate::pb;
 
 use core::cmp::Ordering;
-use num_traits::cast::AsPrimitive;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum DataType {
@@ -72,18 +71,14 @@ macro_rules! diff_float {
         }
         let mut err = f64::default();
         for (src, targ) in $src.chunks_exact(N).zip($targ.chunks_exact(N)) {
-            let src: f64 = <$ty>::from_le_bytes(src.try_into().unwrap()).as_();
-            let targ: f64 = <$ty>::from_le_bytes(targ.try_into().unwrap()).as_();
-            let num = match targ.partial_cmp(&src) {
+            let src = f64::from(<$ty>::from_le_bytes(src.try_into().unwrap()));
+            let targ = f64::from(<$ty>::from_le_bytes(targ.try_into().unwrap()));
+            err = err.max(match targ.partial_cmp(&src) {
                 Some(Ordering::Equal) => continue,
                 Some(Ordering::Less) => (src - targ),
                 Some(Ordering::Greater) => (targ - src),
                 None => return None,
-            };
-            let denom = 1.0; // src.abs().max(targ.abs());
-            if err * denom < num {
-                err = num / denom;
-            }
+            });
         }
         Some(err)
     }};
@@ -98,20 +93,14 @@ macro_rules! diff_int {
         }
         Some($src.chunks_exact(N).zip($targ.chunks_exact(N)).fold(
             f64::default(),
-            |err, (src, targ)| {
+            |prev, (src, targ)| {
                 let src = <$ty>::from_le_bytes(src.try_into().unwrap());
                 let targ = <$ty>::from_le_bytes(targ.try_into().unwrap());
-                let num: f64 = match targ.cmp(&src) {
-                    Ordering::Equal => return err,
-                    Ordering::Less => (src - targ).as_(),
-                    Ordering::Greater => (targ - src).as_(),
-                };
-                let denom: f64 = 1.0; // src.abs().max(targ.abs()).as_();
-                if err * denom < num {
-                    num / denom
-                } else {
-                    err
-                }
+                prev.max(match targ.cmp(&src) {
+                    Ordering::Equal => return prev,
+                    Ordering::Less => (src - targ) as f64,
+                    Ordering::Greater => (targ - src) as f64,
+                })
             },
         ))
     }};
@@ -124,20 +113,14 @@ macro_rules! diff_int {
         }
         Some($src.chunks_exact(N).zip($targ.chunks_exact(N)).fold(
             f64::default(),
-            |err, (src, targ)| {
+            |prev, (src, targ)| {
                 let src = <$ty>::from_le_bytes(src.try_into().unwrap());
                 let targ = <$ty>::from_le_bytes(targ.try_into().unwrap());
-                let num: f64 = match targ.cmp(&src) {
-                    Ordering::Equal => return err,
-                    Ordering::Less => (src - targ).as_(),
-                    Ordering::Greater => (targ - src).as_(),
-                };
-                let denom: f64 = 1.0; // src.max(targ).as_();
-                if err * denom < num {
-                    num / denom
-                } else {
-                    err
-                }
+                prev.max(match targ.cmp(&src) {
+                    Ordering::Equal => return prev,
+                    Ordering::Less => (src - targ) as f64,
+                    Ordering::Greater => (targ - src) as f64,
+                })
             },
         ))
     }};
