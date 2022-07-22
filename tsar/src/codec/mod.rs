@@ -55,7 +55,7 @@ impl BufferList {
     }
 
     pub fn iter_slice(&self) -> impl ExactSizeIterator<Item = &[u8]> {
-        self.inner.iter().map(|f| f.as_slice())
+        self.iter().map(|f| f.as_slice())
     }
 }
 

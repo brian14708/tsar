@@ -97,7 +97,7 @@ impl Reader {
             .collect::<Vec<_>>();
         let base = PathBuf::from(dst);
         for f in files.iter() {
-            write_to(base.join(f), self.r.file_by_name(f).unwrap(), 0)?;
+            write_all(base.join(f), self.r.file_by_name(f).unwrap())?;
         }
         Ok(())
     }
@@ -142,6 +142,22 @@ impl Reader {
         });
         Ok(())
     }
+}
+
+fn write_all(p: impl AsRef<Path>, mut r: impl io::Read) -> std::io::Result<()> {
+    let outpath = p.as_ref();
+    if let Some(p) = outpath.parent() {
+        if !p.exists() {
+            fs::create_dir_all(&p)?;
+        }
+    }
+    let mut outfile = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&outpath)?;
+    io::copy(&mut r, &mut outfile)?;
+    Ok(())
 }
 
 fn write_to(p: impl AsRef<Path>, mut r: impl io::Read, offset: u64) -> std::io::Result<()> {

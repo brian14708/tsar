@@ -4,7 +4,7 @@ use num_traits::AsPrimitive;
 use super::Codec;
 use crate::result::Result;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Convert {
     Float32ToBfloat16,
     Float32ToFloat16,

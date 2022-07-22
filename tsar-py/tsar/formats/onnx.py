@@ -66,13 +66,12 @@ def save(
 ):
     model = onnx.load(str(src))
     tensors = list(_get_all_tensors(model))
-    blob_list = []
+    blob_list = {}
     tensor_location = str(pathlib.Path(name).with_suffix(".data"))
     tensor_offset = 0
     for idx, tensor in enumerate(tensors):
         if progress_fn:
             progress_fn(idx, len(tensors))
-        tensor_name = f"{name}/{tensor.name}"
         save_external = None
 
         if tensor.data_type == onnx.TensorProto.FLOAT:
@@ -247,16 +246,16 @@ def save(
                 tensor.ClearField("raw_data")
 
         if save_external:
+            blob_name = f"{name}[{idx}]"
             dst.write_blob(
                 save_external[0],
-                tensor_name,
+                blob_name,
                 save_external[1],
                 list(tensor.dims),
                 error,
                 (tensor_location, tensor_offset),
             )
-            blob_list.append(tensor_name)
-            tensor.name = tensor_name
+            blob_list[tensor.name] = blob_name
             tensor.data_location = onnx.TensorProto.EXTERNAL
             tensor.ClearField("external_data")
             for (k, v) in {
