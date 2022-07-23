@@ -87,19 +87,16 @@ impl Codec for Zfp<'_> {
         }
 
         let hdr = unsafe { zfp_sys::zfp_write_header(zfp, field, zfp_sys::ZFP_HEADER_MODE) };
-        if hdr == 0 {
-            return Err(Error::ZPFUnknown);
-        }
         let zfpsize = unsafe { hdr + zfp_sys::zfp_compress(zfp, field) };
-        if zfpsize == 0 {
-            return Err(Error::ZPFUnknown);
-        }
         out[0].truncate((hdr + zfpsize) as usize);
 
         unsafe {
             zfp_sys::zfp_field_free(field);
             zfp_sys::zfp_stream_close(zfp);
             zfp_sys::stream_close(stream);
+        }
+        if hdr == 0 || zfpsize == 0 {
+            return Err(Error::ZPFUnknown);
         }
 
         Ok(())
@@ -130,14 +127,8 @@ impl Codec for Zfp<'_> {
         }
 
         let hdr = unsafe { zfp_sys::zfp_read_header(zfp, field, zfp_sys::ZFP_HEADER_MODE) };
-        if hdr == 0 {
-            return Err(Error::ZPFUnknown);
-        }
 
         let sz = unsafe { zfp_sys::zfp_decompress(zfp, field) };
-        if sz == 0 {
-            return Err(Error::ZPFUnknown);
-        }
 
         unsafe {
             zfp_sys::zfp_field_free(field);
@@ -145,6 +136,9 @@ impl Codec for Zfp<'_> {
             zfp_sys::stream_close(stream);
         }
 
+        if hdr == 0 || sz == 0 {
+            return Err(Error::ZPFUnknown);
+        }
         Ok(())
     }
 }
