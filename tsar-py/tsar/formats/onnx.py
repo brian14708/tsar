@@ -55,6 +55,14 @@ def _get_attribute_tensors_from_graph(
             )
 
 
+def _num_elements(tensor: onnx.TensorProto) -> int:
+    """Return the number of elements in a tensor."""
+    p = 1
+    for dim in tensor.dims:
+        p *= dim
+    return p
+
+
 # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 def save(
     name: str,
@@ -65,13 +73,15 @@ def save(
     progress_fn: Callable[[int, int], None] = None,
 ):
     model = onnx.load(str(src))
-    tensors = list(_get_all_tensors(model))
+    tensors = sorted(_get_all_tensors(model), key=_num_elements)
     blob_list = {}
     tensor_location = str(pathlib.Path(name).with_suffix(".data"))
     tensor_offset = 0
     for idx, tensor in enumerate(tensors):
         if progress_fn:
             progress_fn(idx, len(tensors))
+        if not tensor.name:
+            continue
         save_external = None
 
         if tensor.data_type == onnx.TensorProto.FLOAT:

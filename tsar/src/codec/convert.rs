@@ -49,7 +49,7 @@ macro_rules! cvt_type_blk {
                 *s = <$src>::from_le_bytes(b.try_into().unwrap());
             });
         $fun(&mut dst_tmp, &src_tmp);
-        dst_tmp.iter().take(r.len()).for_each(|v| {
+        dst_tmp.iter().take(r.len() / NS).for_each(|v| {
             $out.extend_from_slice(&v.to_le_bytes());
         });
     };

@@ -11,3 +11,5 @@ def progress(count, total, status=""):
 
     sys.stdout.write(f"[{bar_out}] {percents}% ...{status}\r")
     sys.stdout.flush()
+    if count == total:
+        sys.stdout.write("\n")
