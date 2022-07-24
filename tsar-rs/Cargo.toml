@@ -1,9 +1,11 @@
 [package]
-name = "tsar"
+name = "tsar-rs"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "tsar"
+path = "src/lib.rs"
 
 [dependencies]
 base64 = "0.13.0"

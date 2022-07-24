@@ -1,5 +1,5 @@
 [workspace]
 members = [
-  "tsar",
+  "tsar-rs",
   "tsar-py",
 ]
