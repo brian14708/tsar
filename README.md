@@ -3,7 +3,7 @@
 Archive file format for storing tensors, with optional lossy compression for better storage efficiency.
 
 Features:
-- floating-point compression (e.g. [zfp](https://github.com/LLNL/zfp))
+- floating-point compression ([zfp](https://github.com/LLNL/zfp))
 - storing data in lower precision format (bfloat16, ...)
 - compressing mantissa and exponents separately
 - tools for building archives from ONNX format
@@ -34,4 +34,14 @@ TODO
 
 ## Results
 
-TODO
+| Model                                                                               | Compression     | Size      |
+| ----------------------------------------------------------------------------------- | --------------- | --------- |
+| [ResNet-152](https://github.com/onnx/models/tree/main/vision/classification/resnet) | none            | 230.6 MiB |
+|                                                                                     | gzip            | 215.4 MiB |
+|                                                                                     | tsar (lossless) | 197.4 MiB |
+|                                                                                     | tsar (err=1e-6) | 129.8 MiB |
+|                                                                                     | tsar (err=1e-5) | 108.7 MiB |
+|                                                                                     | tsar (err=1e-4) | 87.8 MiB  |
+|                                                                                     | tsar (err=1e-3) | 60.6 MiB  |
+
+
