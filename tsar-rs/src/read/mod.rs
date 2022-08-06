@@ -138,4 +138,16 @@ impl Read for Blob {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.get_data().unwrap().read(buf)
     }
+
+    fn read_to_end(&mut self, buf: &mut Vec<u8>) -> std::io::Result<usize> {
+        self.get_data().unwrap().read_to_end(buf)
+    }
+
+    fn read_to_string(&mut self, buf: &mut String) -> std::io::Result<usize> {
+        self.get_data().unwrap().read_to_string(buf)
+    }
+
+    fn read_exact(&mut self, buf: &mut [u8]) -> std::io::Result<()> {
+        self.get_data().unwrap().read_exact(buf)
+    }
 }
