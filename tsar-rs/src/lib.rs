@@ -14,6 +14,6 @@ mod pbgen {
 
 pub use data_type::DataType;
 pub use pbgen::tsar as pb;
-pub use read::Archive;
+pub use read::{Archive, Blob};
 pub use result::{Error, Result};
 pub use write::{BlobWriteOption, Builder};

@@ -31,20 +31,21 @@ impl<R: Read + Seek> Archive<R> {
     }
 
     pub fn blob_by_name(&mut self, name: impl AsRef<str>) -> Result<Blob> {
+        let name = name.as_ref();
         let b = self
             .meta
             .blobs
             .iter()
-            .find(|&b| b.name == name.as_ref())
-            .expect("TODO");
+            .find(|&b| b.name == name)
+            .expect("Missing blob");
 
         let mut bb = BufferList::new();
         bb.reset(b.chunk_ids.len());
         for (i, c) in b.chunk_ids.iter().enumerate() {
             let mut f = self
                 .z
-                .by_name(&paths::chunk_path(c.as_str()))
-                .expect("TODO");
+                .by_name(&paths::chunk_path(c))
+                .expect("Missing chunk");
             std::io::copy(&mut f, &mut bb[i])?;
         }
         Ok(Blob {
@@ -82,13 +83,21 @@ impl Blob {
     }
 
     pub fn byte_len(&self) -> usize {
-        let dt: DataType = self.meta.data_type.unwrap().try_into().unwrap();
+        let dt: DataType = self.meta.data_type.try_into().unwrap();
         self.meta
             .dims
             .iter()
             .map(|s| *s as usize)
             .product::<usize>()
             * dt.byte_len()
+    }
+
+    pub fn data_type(&self) -> DataType {
+        self.meta.data_type.try_into().unwrap()
+    }
+
+    pub fn shape(&self) -> impl IntoIterator<Item = usize> + '_ {
+        self.meta.dims.iter().map(|f| *f as usize)
     }
 
     fn get_data(&mut self) -> std::io::Result<&mut impl std::io::Read> {
@@ -102,7 +111,7 @@ impl Blob {
                     .collect::<Vec<_>>();
                 let d = compress::decompress(
                     b,
-                    self.meta.data_type.unwrap().try_into().unwrap(),
+                    self.meta.data_type.try_into().unwrap(),
                     &self
                         .meta
                         .dims

@@ -39,11 +39,11 @@ impl From<DataType> for pb::DataType {
     }
 }
 
-impl TryFrom<pb::DataType> for DataType {
-    type Error = pb::DataType;
+impl TryFrom<protobuf::EnumOrUnknown<pb::DataType>> for DataType {
+    type Error = i32;
 
-    fn try_from(value: pb::DataType) -> Result<Self, Self::Error> {
-        match value {
+    fn try_from(value: protobuf::EnumOrUnknown<pb::DataType>) -> Result<Self, Self::Error> {
+        match value.enum_value()? {
             pb::DataType::BYTE => Ok(DataType::Byte),
             pb::DataType::FLOAT32 => Ok(DataType::Float32),
             pb::DataType::FLOAT64 => Ok(DataType::Float64),
@@ -57,7 +57,7 @@ impl TryFrom<pb::DataType> for DataType {
             pb::DataType::UINT32 => Ok(DataType::Uint32),
             pb::DataType::INT64 => Ok(DataType::Int64),
             pb::DataType::UINT64 => Ok(DataType::Uint64),
-            v => Err(v),
+            pb::DataType::UNKNOWN_DATA_TYPE => unreachable!(),
         }
     }
 }
