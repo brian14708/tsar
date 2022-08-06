@@ -82,18 +82,20 @@ impl Blob {
         &self.meta.name
     }
 
-    pub fn byte_len(&self) -> usize {
-        let dt: DataType = self.meta.data_type.try_into().unwrap();
-        self.meta
-            .dims
-            .iter()
-            .map(|s| *s as usize)
-            .product::<usize>()
-            * dt.byte_len()
+    pub fn byte_len(&self) -> Option<usize> {
+        let dt = self.data_type()?;
+        Some(
+            self.meta
+                .dims
+                .iter()
+                .map(|s| *s as usize)
+                .product::<usize>()
+                * dt.byte_len(),
+        )
     }
 
-    pub fn data_type(&self) -> DataType {
-        self.meta.data_type.try_into().unwrap()
+    pub fn data_type(&self) -> Option<DataType> {
+        self.meta.data_type.try_into().ok()
     }
 
     pub fn shape(&self) -> impl IntoIterator<Item = usize> + '_ {
@@ -103,6 +105,7 @@ impl Blob {
     fn get_data(&mut self) -> std::io::Result<&mut impl std::io::Read> {
         if matches!(&mut self.state, BlobState::Chunks(_)) {
             if let BlobState::Chunks(b) = std::mem::replace(&mut self.state, BlobState::Invalid) {
+                let dt = self.data_type().expect("unknown data format");
                 let stages = self
                     .meta
                     .compression_stages
@@ -111,7 +114,7 @@ impl Blob {
                     .collect::<Vec<_>>();
                 let d = compress::decompress(
                     b,
-                    self.meta.data_type.try_into().unwrap(),
+                    dt,
                     &self
                         .meta
                         .dims

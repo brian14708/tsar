@@ -118,7 +118,10 @@ impl Reader {
 
         for (k, v) in blobs.iter().flat_map(|b| {
             if let Some((target_file, offset)) = b.target_file() {
-                Some((target_file, offset + b.byte_len() as u64))
+                Some((
+                    target_file,
+                    offset + b.byte_len().expect("unknown blob length") as u64,
+                ))
             } else {
                 None
             }
