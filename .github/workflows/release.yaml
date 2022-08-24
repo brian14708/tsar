@@ -34,7 +34,7 @@ jobs:
     - uses: messense/maturin-action@v1
       with:
         command: build
-        args: --manifest-path tsar-py/Cargo.toml --release --no-sdist -o dist
+        args: --manifest-path tsar-py/Cargo.toml --release -o dist
     - name: Upload wheels
       uses: actions/upload-artifact@v3
       with:
@@ -48,7 +48,7 @@ jobs:
     - uses: messense/maturin-action@v1
       with:
         command: build
-        args: --manifest-path tsar-py/Cargo.toml --release --no-sdist -o dist --universal2
+        args: --manifest-path tsar-py/Cargo.toml --release -o dist --universal2
     - name: Upload wheels
       uses: actions/upload-artifact@v3
       with:
