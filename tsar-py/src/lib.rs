@@ -199,7 +199,8 @@ fn create_file(p: impl AsRef<Path>, sz: u64) -> std::io::Result<()> {
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn tsar(_py: Python, m: &PyModule) -> PyResult<()> {
+#[pyo3(name = "tsar")]
+fn tsar_py(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Writer>()?;
     m.add_class::<Reader>()?;
     Ok(())
