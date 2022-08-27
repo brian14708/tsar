@@ -9,7 +9,7 @@ from tsar.utils.progress import progress
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--error", default=1e-6, type=float)
+    parser.add_argument("-e", "--error", default=1e-7, type=float)
     parser.add_argument("srcs", nargs="+", metavar="INPUT", type=pathlib.Path)
     parser.add_argument("dst", metavar="OUTPUT", type=pathlib.Path)
     args = parser.parse_args()
