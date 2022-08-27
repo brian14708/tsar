@@ -16,15 +16,15 @@ pub fn compress<'a>(
     let mut tmp = BufferList::new();
     for (idx, &s) in stages.iter().enumerate() {
         if idx == 0 {
-            do_encode(s, [data], dt, shape, target_prec, &mut out)?;
+            do_encode(s, [data], shape, target_prec, &mut out)?;
         } else {
-            do_encode(s, tmp.iter_slice(), dt, shape, target_prec, &mut out)?;
+            do_encode(s, tmp.iter_slice(), shape, target_prec, &mut out)?;
         }
         std::mem::swap(&mut out, &mut tmp);
     }
     let result = tmp.clone();
     for &s in stages.iter().rev() {
-        do_decode(s, tmp.iter_slice(), dt, shape, &mut out)?;
+        do_decode(s, tmp.iter_slice(), shape, &mut out)?;
         std::mem::swap(&mut out, &mut tmp);
     }
     let err = dt.max_difference(data, tmp.iter().next().unwrap()).unwrap();
@@ -33,13 +33,13 @@ pub fn compress<'a>(
 
 pub fn decompress<'a>(
     mut data: BufferList,
-    dt: DataType,
+    _dt: DataType,
     shape: &'a [usize],
     stages: &'a [pb::CompressionStage],
 ) -> Result<Vec<u8>> {
     let mut out = BufferList::new();
     for &s in stages.iter().rev() {
-        do_decode(s, data.iter_slice(), dt, shape, &mut out)?;
+        do_decode(s, data.iter_slice(), shape, &mut out)?;
         std::mem::swap(&mut out, &mut data);
     }
     assert_eq!(data.len(), 1);
@@ -49,7 +49,6 @@ pub fn decompress<'a>(
 fn do_encode<'a, I>(
     stage: pb::CompressionStage,
     data: I,
-    dt: DataType,
     shape: &'a [usize],
     target_prec: f64,
     out: &mut BufferList,
@@ -74,10 +73,10 @@ where
         pb::CompressionStage::SPLIT_MANTISSA_FLOAT32 => codec::Split::Float32.encode(data, out),
         pb::CompressionStage::SPLIT_MANTISSA_FLOAT64 => codec::Split::Float64.encode(data, out),
         pb::CompressionStage::ZFP_FLOAT32_1D => {
-            codec::Zfp::new(dt, 1, shape, target_prec).encode(data, out)
+            codec::Zfp::new(DataType::Float32, 1, shape, target_prec).encode(data, out)
         }
         pb::CompressionStage::ZFP_FLOAT64_1D => {
-            codec::Zfp::new(dt, 1, shape, target_prec).encode(data, out)
+            codec::Zfp::new(DataType::Float64, 1, shape, target_prec).encode(data, out)
         }
     }
 }
@@ -85,7 +84,6 @@ where
 fn do_decode<'a, I>(
     stage: pb::CompressionStage,
     data: I,
-    dt: DataType,
     shape: &'a [usize],
     out: &mut BufferList,
 ) -> Result<()>
@@ -109,10 +107,10 @@ where
         pb::CompressionStage::SPLIT_MANTISSA_FLOAT32 => codec::Split::Float32.decode(data, out),
         pb::CompressionStage::SPLIT_MANTISSA_FLOAT64 => codec::Split::Float64.decode(data, out),
         pb::CompressionStage::ZFP_FLOAT32_1D => {
-            codec::Zfp::new(dt, 1, shape, 0.0).decode(data, out)
+            codec::Zfp::new(DataType::Float32, 1, shape, 0.0).decode(data, out)
         }
         pb::CompressionStage::ZFP_FLOAT64_1D => {
-            codec::Zfp::new(dt, 1, shape, 0.0).decode(data, out)
+            codec::Zfp::new(DataType::Float64, 1, shape, 0.0).decode(data, out)
         }
     }
 }

@@ -54,8 +54,17 @@ pub const COMPRESS_METHOD: [(DataType, &[&[pb::CompressionStage]]); 13] = [
             ],
         ],
     ),
+    (
+        DataType::Float16,
+        methods![
+            [pb::CompressionStage::ZSTD],
+            [
+                pb::CompressionStage::SPLIT_MANTISSA_BFLOAT16,
+                pb::CompressionStage::ZSTD
+            ],
+        ],
+    ),
     (DataType::Byte, methods![[pb::CompressionStage::ZSTD],]),
-    (DataType::Float16, methods![[pb::CompressionStage::ZSTD],]),
     (DataType::Int8, methods![[pb::CompressionStage::ZSTD],]),
     (DataType::Uint8, methods![[pb::CompressionStage::ZSTD],]),
     (DataType::Int16, methods![[pb::CompressionStage::ZSTD],]),
