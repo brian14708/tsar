@@ -28,7 +28,7 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: KyleMayes/install-llvm-action@v1.5.4
+    - uses: KyleMayes/install-llvm-action@v1.5.5
       with:
         version: "12.0"
     - uses: messense/maturin-action@v1
