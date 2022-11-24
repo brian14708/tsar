@@ -151,14 +151,14 @@ fn write_all(p: impl AsRef<Path>, mut r: impl io::Read) -> std::io::Result<()> {
     let outpath = p.as_ref();
     if let Some(p) = outpath.parent() {
         if !p.exists() {
-            fs::create_dir_all(&p)?;
+            fs::create_dir_all(p)?;
         }
     }
     let mut outfile = fs::OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
-        .open(&outpath)?;
+        .open(outpath)?;
     io::copy(&mut r, &mut outfile)?;
     Ok(())
 }
@@ -167,13 +167,13 @@ fn write_to(p: impl AsRef<Path>, mut r: impl io::Read, offset: u64) -> std::io::
     let outpath = p.as_ref();
     if let Some(p) = outpath.parent() {
         if !p.exists() {
-            fs::create_dir_all(&p)?;
+            fs::create_dir_all(p)?;
         }
     }
     let mut outfile = fs::OpenOptions::new()
         .write(true)
         .create(true)
-        .open(&outpath)?;
+        .open(outpath)?;
     if offset > 0 {
         outfile.seek(io::SeekFrom::Start(offset))?;
     }
@@ -185,14 +185,14 @@ fn create_file(p: impl AsRef<Path>, sz: u64) -> std::io::Result<()> {
     let outpath = p.as_ref();
     if let Some(p) = outpath.parent() {
         if !p.exists() {
-            fs::create_dir_all(&p)?;
+            fs::create_dir_all(p)?;
         }
     }
     let outfile = fs::OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
-        .open(&outpath)?;
+        .open(outpath)?;
     outfile.set_len(sz)?;
     Ok(())
 }
