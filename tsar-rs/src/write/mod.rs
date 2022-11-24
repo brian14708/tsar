@@ -129,7 +129,7 @@ impl<W: Write + Seek> Builder<W> {
         iter: impl IntoIterator<Item = &'a [u8]>,
     ) -> Result<()> {
         for o in iter {
-            let result = base64::encode_config(&Sha1::digest(o), base64::URL_SAFE);
+            let result = base64::encode_config(Sha1::digest(o), base64::URL_SAFE);
 
             if !self.chunks.contains(&result) {
                 self.z.start_file(
