@@ -3,7 +3,7 @@ import sys
 import itertools
 import array
 import json
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Optional
 import onnx
 
 import tsar.tsar as _tsar
@@ -70,7 +70,7 @@ def save(
     dst: _tsar.Writer,
     error: float,
     size_limit: int = 16 * 1024,
-    progress_fn: Callable[[int, int], None] = None,
+    progress_fn: Optional[Callable[[int, int], None]] = None,
 ):
     model = onnx.load(str(src))
     tensors = sorted(_get_all_tensors(model), key=_num_elements)
