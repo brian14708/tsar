@@ -8,7 +8,7 @@ name = "tsar"
 path = "src/lib.rs"
 
 [dependencies]
-base64 = "0.13.0"
+base64 = "0.20.0"
 half = { version = "2.1.0", features = ["num-traits"] }
 num-traits = "0.2.15"
 protobuf = "3.1.0"
