@@ -22,9 +22,9 @@ def _recursive_attribute_processor(
     func: Callable[[onnx.GraphProto], Iterable[onnx.TensorProto]],
 ) -> Iterable[onnx.TensorProto]:
     """Create an iterator through processing ONNX model attributes with functor."""
-    if attribute.type == onnx.AttributeProto.AttributeType.GRAPH:
+    if attribute.type == onnx.AttributeProto.GRAPH:
         yield from func(attribute.g)
-    elif attribute.type == onnx.AttributeProto.AttributeType.GRAPHS:
+    elif attribute.type == onnx.AttributeProto.GRAPHS:
         for graph in attribute.graphs:
             yield from func(graph)
 
