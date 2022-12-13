@@ -12,6 +12,11 @@ use zip::write::FileOptions;
 use crate::{compress, paths, pb, result::Result, DataType};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const URL_SAFE_ENGINE: base64::engine::fast_portable::FastPortable =
+    base64::engine::fast_portable::FastPortable::from(
+        &base64::alphabet::URL_SAFE,
+        base64::engine::fast_portable::PAD,
+    );
 
 pub struct Builder<W: Write + Seek> {
     z: zip::write::ZipWriter<W>,
@@ -129,7 +134,7 @@ impl<W: Write + Seek> Builder<W> {
         iter: impl IntoIterator<Item = &'a [u8]>,
     ) -> Result<()> {
         for o in iter {
-            let result = base64::encode_config(Sha1::digest(o), base64::URL_SAFE);
+            let result = base64::encode_engine(Sha1::digest(o), &URL_SAFE_ENGINE);
 
             if !self.chunks.contains(&result) {
                 self.z.start_file(
