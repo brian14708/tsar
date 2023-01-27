@@ -29,7 +29,7 @@ pub struct BlobWriteOption {
 impl<W: Write + Seek> Builder<W> {
     pub fn new(inner: W) -> Self {
         let mut z = zip::write::ZipWriter::new(inner);
-        z.set_comment(format!("tsar v{}", VERSION));
+        z.set_comment(format!("tsar v{VERSION}"));
         Self {
             z,
             meta: pb::Bundle::new(),
