@@ -268,7 +268,7 @@ def save(
             blob_list[tensor.name] = blob_name
             tensor.data_location = onnx.TensorProto.EXTERNAL
             tensor.ClearField("external_data")
-            for (k, v) in {
+            for k, v in {
                 "location": tensor_location,
                 "offset": tensor_offset,
                 "length": len(save_external[1]),
