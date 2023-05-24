@@ -58,6 +58,7 @@ impl<'a> Zfp<'a> {
     }
 }
 
+#[allow(clippy::useless_conversion, clippy::unnecessary_cast)] // workaround for windows
 impl Codec for Zfp<'_> {
     fn encode<'a, I>(&self, data: I, out: &mut super::BufferList) -> Result<()>
     where
@@ -120,7 +121,10 @@ impl Codec for Zfp<'_> {
             unsafe { zfp_sys::zfp_stream_open(std::ptr::null_mut() as *mut zfp_sys::bitstream) };
 
         let stream = unsafe {
-            zfp_sys::stream_open(data.as_ptr() as *mut std::ffi::c_void, data.len() as u64)
+            zfp_sys::stream_open(
+                data.as_ptr() as *mut std::ffi::c_void,
+                data.len().try_into().unwrap(),
+            )
         };
         unsafe {
             zfp_sys::zfp_stream_set_bit_stream(zfp, stream);
