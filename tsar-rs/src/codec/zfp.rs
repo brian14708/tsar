@@ -24,12 +24,12 @@ impl<'a> Zfp<'a> {
     }
 
     unsafe fn new_field(&self, data: *mut std::ffi::c_void) -> *mut zfp_sys::zfp_field {
-        let mut field_shape = [1u32; 4];
+        let mut field_shape = [1usize; 4];
         for (i, &s) in self.shape.iter().enumerate() {
             if i < self.dim {
-                field_shape[i] = s as u32;
+                field_shape[i] = s;
             } else {
-                field_shape[self.dim - 1] *= s as u32;
+                field_shape[self.dim - 1] *= s;
             }
         }
 
