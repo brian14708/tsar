@@ -1,2 +1,2 @@
-from tsar.writer import writer
-from tsar.extract import extract
+from .writer import writer
+from .extract import extract

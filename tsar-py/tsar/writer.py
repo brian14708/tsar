@@ -1,12 +1,12 @@
 from contextlib import contextmanager
 
-import tsar.tsar as _tsar
+from .tsar import Writer
 
 
 @contextmanager
 def writer(*args, **kwds):
     # Code to acquire resource, e.g.:
-    wobj = _tsar.Writer(*args, **kwds)
+    wobj = Writer(*args, **kwds)
     try:
         yield wobj
     finally:
