@@ -173,6 +173,7 @@ fn write_to(p: impl AsRef<Path>, mut r: impl io::Read, offset: u64) -> std::io::
     let mut outfile = fs::OpenOptions::new()
         .write(true)
         .create(true)
+        .truncate(true)
         .open(outpath)?;
     if offset > 0 {
         outfile.seek(io::SeekFrom::Start(offset))?;
@@ -200,7 +201,7 @@ fn create_file(p: impl AsRef<Path>, sz: u64) -> std::io::Result<()> {
 /// A Python module implemented in Rust.
 #[pymodule]
 #[pyo3(name = "tsar")]
-fn tsar_py(_py: Python, m: &PyModule) -> PyResult<()> {
+fn tsar_py(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Writer>()?;
     m.add_class::<Reader>()?;
     Ok(())
