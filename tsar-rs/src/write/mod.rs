@@ -8,7 +8,7 @@ use std::{
 use base64::Engine;
 use protobuf::{CodedOutputStream, EnumOrUnknown, Message};
 use sha1::{Digest, Sha1};
-use zip::write::FileOptions;
+use zip::write::SimpleFileOptions;
 
 use crate::{compress, paths, pb, result::Result, DataType};
 
@@ -40,7 +40,7 @@ impl<W: Write + Seek> Builder<W> {
     pub fn add_file(&mut self, name: impl Into<String>, mut reader: impl Read) -> Result<()> {
         let name = name.into();
         self.z
-            .start_file(name.clone(), FileOptions::default().large_file(true))?;
+            .start_file(name.clone(), SimpleFileOptions::default().large_file(true))?;
         std::io::copy(&mut reader, &mut self.z)?;
         self.meta.raw_files.push(pb::RawFile {
             name,
@@ -114,7 +114,7 @@ impl<W: Write + Seek> Builder<W> {
 
     pub fn finish(&mut self) -> Result<()> {
         self.z
-            .start_file(paths::BUNDLE_META_PATH, FileOptions::default())?;
+            .start_file(paths::BUNDLE_META_PATH, SimpleFileOptions::default())?;
         self.meta.blobs.sort_by(|a, b| a.name.cmp(&b.name));
         // TODO check target_file contiguous
         self.meta
@@ -135,7 +135,7 @@ impl<W: Write + Seek> Builder<W> {
             if !self.chunks.contains(&result) {
                 self.z.start_file(
                     paths::chunk_path(&result),
-                    FileOptions::default()
+                    SimpleFileOptions::default()
                         .compression_method(if blob.compression_stages.is_empty() {
                             // use zip compression when no custom compression stage
                             zip::CompressionMethod::DEFLATE
