@@ -11,7 +11,7 @@ use rayon::prelude::*;
 
 #[pyclass(module = "tsar.tsar")]
 struct Writer {
-    w: tsar::Builder<std::fs::File>,
+    w: Option<tsar::Builder<std::fs::File>>,
 }
 
 #[pymethods]
@@ -19,12 +19,16 @@ impl Writer {
     #[new]
     fn new(dst: &str) -> PyResult<Self> {
         Ok(Self {
-            w: tsar::Builder::new(std::fs::File::create(dst)?),
+            w: Some(tsar::Builder::new(std::fs::File::create(dst)?)),
         })
     }
 
     pub fn write_file(&mut self, name: String, d: &[u8]) -> PyResult<()> {
-        self.w.add_file(name, std::io::Cursor::new(d)).unwrap();
+        self.w
+            .as_mut()
+            .expect("The writer has already been closed.")
+            .add_file(name, std::io::Cursor::new(d))
+            .unwrap();
         Ok(())
     }
 
@@ -57,18 +61,25 @@ impl Writer {
             _ => None,
         };
 
+        let w = self
+            .w
+            .as_mut()
+            .expect("The writer has already been closed.");
+
         match ty {
-            Some(ty) => self.w.add_blob(name, data, ty, &dims, opt),
-            _ => self
-                .w
-                .add_blob(name, data, tsar::DataType::Byte, &[data.len()], opt),
+            Some(ty) => w.add_blob(name, data, ty, &dims, opt),
+            _ => w.add_blob(name, data, tsar::DataType::Byte, &[data.len()], opt),
         }
         .unwrap();
         Ok(())
     }
 
     pub fn close(&mut self) -> PyResult<()> {
-        self.w.finish().unwrap();
+        self.w
+            .take()
+            .expect("The writer has already been closed.")
+            .finish()
+            .unwrap();
         Ok(())
     }
 }
