@@ -112,15 +112,17 @@ impl<W: Write + Seek> Builder<W> {
         self.write_chunks(b, [data])
     }
 
-    pub fn finish(&mut self) -> Result<()> {
-        self.z
-            .start_file(paths::BUNDLE_META_PATH, SimpleFileOptions::default())?;
-        self.meta.blobs.sort_by(|a, b| a.name.cmp(&b.name));
+    pub fn finish(self) -> Result<()> {
+        let Self {
+            mut z,
+            mut meta,
+            chunks: _,
+        } = self;
+        z.start_file(paths::BUNDLE_META_PATH, SimpleFileOptions::default())?;
+        meta.blobs.sort_by(|a, b| a.name.cmp(&b.name));
         // TODO check target_file contiguous
-        self.meta
-            .write_to(&mut CodedOutputStream::new(&mut self.z))
-            .unwrap();
-        self.z.finish()?;
+        meta.write_to(&mut CodedOutputStream::new(&mut z)).unwrap();
+        z.finish()?;
         Ok(())
     }
 
