@@ -32,6 +32,7 @@ impl Writer {
         Ok(())
     }
 
+    #[pyo3(signature = (ty, name, data, dims, error_limit, target_file=None))]
     pub fn write_blob(
         &mut self,
         ty: &str,
