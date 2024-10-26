@@ -21,6 +21,7 @@ disable = [
     "missing-module-docstring",
     "missing-function-docstring",
     "invalid-name",
+    "too-many-positional-arguments",
 ]
 extension-pkg-allow-list = ["tsar.tsar"]
 generated-members = ["onnx.*Proto"]
