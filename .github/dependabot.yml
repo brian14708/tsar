@@ -4,16 +4,16 @@
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 
 version: 2
-updates:
-  - package-ecosystem: "cargo"
-    directory: "/"
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "pip"
-    directory: "/tsar-py"
-    schedule:
-      interval: "daily"
+updates: []
+  #- package-ecosystem: "cargo"
+  #  directory: "/"
+  #  schedule:
+  #    interval: "daily"
+  #- package-ecosystem: "github-actions"
+  #  directory: "/"
+  #  schedule:
+  #    interval: "daily"
+  #- package-ecosystem: "pip"
+  #  directory: "/tsar-py"
+  #  schedule:
+  #    interval: "daily"
