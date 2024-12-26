@@ -4,6 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "tsar-py"
+version = "0.1.0"
 requires-python = ">=3.7"
 dependencies = ["onnx>=1.13.0,<2"]
 classifiers = [
