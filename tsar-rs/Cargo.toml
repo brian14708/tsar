@@ -19,7 +19,7 @@ zip = { version = "2.0.0", default-features = false, features = ["deflate"] }
 zstd = "0.13.0"
 
 [target.'cfg(windows)'.dependencies]
-zfp-sys-cc = "0.1.4"
+zfp-sys-cc = "0.2.0"
 
 [target.'cfg(unix)'.dependencies]
 zfp-sys = { version = "0.3.0", features = ["static"]}
