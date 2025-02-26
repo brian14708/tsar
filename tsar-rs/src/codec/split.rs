@@ -27,7 +27,7 @@ impl SplitFloat for f32 {
     fn from_split_bits((e, m): Self::Output) -> Self {
         let e = u32::from(e[0]);
         let m = u32::from_le_bytes([m[0], m[1], m[2], 0]);
-        Self::from_bits(e << 23 | (m & 0x007f_ffff) | (m & 0x0080_0000) << 8)
+        Self::from_bits((e << 23) | (m & 0x007f_ffff) | ((m & 0x0080_0000) << 8))
     }
 }
 
@@ -46,7 +46,9 @@ impl SplitFloat for f64 {
     fn from_split_bits((e, m): Self::Output) -> Self {
         let e = u64::from(u16::from_le_bytes(e));
         let m = u64::from_le_bytes([m[0], m[1], m[2], m[3], m[4], m[5], m[6], 0]);
-        Self::from_bits((e << 52) | (m & 0x000f_ffff_ffff_ffff) | (m & 0x0010_0000_0000_0000) << 11)
+        Self::from_bits(
+            (e << 52) | (m & 0x000f_ffff_ffff_ffff) | ((m & 0x0010_0000_0000_0000) << 11),
+        )
     }
 }
 
@@ -64,7 +66,7 @@ impl SplitFloat for half::bf16 {
     fn from_split_bits((e, m): Self::Output) -> Self {
         let m = u16::from(m[0]);
         let e = u16::from(e[0]);
-        Self::from_bits(e << 7 | (m & 0x7f) | (m & 0x80) << 8)
+        Self::from_bits((e << 7) | (m & 0x7f) | ((m & 0x80) << 8))
     }
 }
 
@@ -82,7 +84,7 @@ impl SplitFloat for half::f16 {
     fn from_split_bits((e, m): Self::Output) -> Self {
         let e = u16::from(e[0]);
         let m = u16::from_le_bytes(m);
-        Self::from_bits(e << 10 | (m & 0x3ff) | (m & 0x400) << 5)
+        Self::from_bits((e << 10) | (m & 0x3ff) | ((m & 0x400) << 5))
     }
 }
 
