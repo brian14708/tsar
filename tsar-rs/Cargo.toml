@@ -27,7 +27,7 @@ zfp-sys = { version = "0.4.0", features = ["static"]}
 [dev-dependencies]
 byteorder = "1.4.3"
 bytes = "1.2.0"
-criterion = "0.6.0"
+criterion = "0.7.0"
 
 [build-dependencies]
 protobuf-codegen = "3.1.0"
