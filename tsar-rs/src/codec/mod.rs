@@ -38,7 +38,7 @@ impl BufferList {
         self.inner.iter_mut().for_each(Vec::clear);
     }
 
-    pub fn iter_mut(&mut self) -> BufferListIterMut {
+    pub fn iter_mut(&mut self) -> BufferListIterMut<'_> {
         let n = self.n;
         BufferListIterMut {
             inner: self.inner.iter_mut(),
@@ -46,7 +46,7 @@ impl BufferList {
         }
     }
 
-    pub fn iter(&self) -> BufferListIter {
+    pub fn iter(&self) -> BufferListIter<'_> {
         let n = self.n;
         BufferListIter {
             inner: self.inner.iter(),
