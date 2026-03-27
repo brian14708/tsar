@@ -12,7 +12,7 @@ base64 = "0.22.0"
 half = { version = "2.1.0", features = ["num-traits"] }
 num-traits = "0.2.15"
 protobuf = "3.1.0"
-sha1 = "0.10.1"
+sha1 = "0.11.0"
 smallvec = "1.9.0"
 thiserror = "2.0.1"
 zip = { version = "8.1.0", default-features = false, features = ["deflate"] }
