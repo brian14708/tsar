@@ -6,7 +6,7 @@ build-backend = "maturin"
 name = "tsar-py"
 version = "0.1.0"
 requires-python = ">=3.7"
-dependencies = ["onnx>=1.13.0,<2"]
+dependencies = ["onnx>=1.19.1,<2"]
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
