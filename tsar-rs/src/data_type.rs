@@ -138,19 +138,19 @@ impl DataType {
         match self {
             DataType::Byte => {
                 const N: usize = std::mem::size_of::<u64>();
-                let src_it = src.chunks_exact(N);
-                let targ_it = targ.chunks_exact(N);
-                let mut err = src_it
-                    .remainder()
+                let (src_chunks, src_rem) = src.as_chunks::<N>();
+                let (targ_chunks, targ_rem) = targ.as_chunks::<N>();
+                let mut err = src_rem
                     .iter()
-                    .zip(targ_it.remainder().iter())
+                    .zip(targ_rem.iter())
                     .map(|(src, targ)| (targ ^ src).count_ones())
                     .sum::<u32>() as f64;
-                err += src_it
-                    .zip(targ_it)
+                err += src_chunks
+                    .iter()
+                    .zip(targ_chunks.iter())
                     .map(|(src, targ)| {
-                        let src = <u64>::from_le_bytes(src.try_into().unwrap());
-                        let targ = <u64>::from_le_bytes(targ.try_into().unwrap());
+                        let src = <u64>::from_le_bytes(*src);
+                        let targ = <u64>::from_le_bytes(*targ);
                         (targ ^ src).count_ones()
                     })
                     .sum::<u32>() as f64;
